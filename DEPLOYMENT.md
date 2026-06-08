@@ -1,7 +1,7 @@
 # PromoSG — Deployment & Operations
 
 ## Live URLs
-- **App:** https://promosg.guanliang976.workers.dev
+- **App:** https://promosg.pages.dev
 - **Scheduled cron Worker:** `promosg-cron`
   - **Daily** (`0 18 * * *`, 02:00 SGT) — archive expired promos (free, no AI)
   - **Weekly** (`30 18 * * SUN`, Mon 02:30 SGT) — ingest new deals
@@ -57,8 +57,8 @@ npx wrangler secret bulk cron-worker/.cf-secrets.json -c cron-worker/wrangler.js
 
 ### Trigger ingestion / expiry manually
 ```
-GET https://promosg.guanliang976.workers.dev/api/cron/ingest?secret=<CRON_SECRET>
-GET https://promosg.guanliang976.workers.dev/api/cron/expire?secret=<CRON_SECRET>
+GET https://promosg.pages.dev/api/cron/ingest?secret=<CRON_SECRET>
+GET https://promosg.pages.dev/api/cron/expire?secret=<CRON_SECRET>
 ```
 
 ## Ingestion pipeline
