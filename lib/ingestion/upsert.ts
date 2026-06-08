@@ -33,6 +33,7 @@ export function toRow(p: NormalizedPromotion) {
     tags,
     status: "active" as const,
     dedupe_key: p.dedupeKey,
+    external_id: p.externalId,
   };
 }
 

@@ -35,9 +35,23 @@ export async function POST(request: NextRequest) {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? Math.min(n, hi) : def;
   };
-  const maxItems = clamp(sp.get("max"), 30, 500);
+  const maxItems = clamp(sp.get("max"), 25, 500);
   const maxAttempts = clamp(sp.get("attempts"), 1, 4);
   const perSource = clamp(sp.get("limit"), 8, 40);
+
+  const supabase = createAdminClient();
+
+  // Posts already ingested → skipped before any LLM call, so recurring runs
+  // only spend AI on genuinely new deals (keeps usage in the free zone).
+  const { data: existing } = await supabase
+    .from("promotions")
+    .select("external_id")
+    .not("external_id", "is", null);
+  const seen = new Set(
+    (existing ?? [])
+      .map((r) => r.external_id as string | null)
+      .filter((v): v is string => Boolean(v)),
+  );
 
   const extractor = new OpenRouterExtractor({ maxAttempts });
   const pipeline = new IngestionPipeline(buildAdapters(perSource), extractor, {
@@ -46,7 +60,7 @@ export async function POST(request: NextRequest) {
 
   let normalized;
   try {
-    normalized = await pipeline.run();
+    normalized = await pipeline.run(seen);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "pipeline failed" },
@@ -54,7 +68,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
   const result = await upsertPromotions(supabase, normalized);
 
   await supabase.from("ingestion_logs").insert({

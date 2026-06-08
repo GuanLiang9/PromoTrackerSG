@@ -44,7 +44,12 @@ export class IngestionPipeline {
     private readonly options: PipelineOptions = {},
   ) {}
 
-  async run(): Promise<NormalizedPromotion[]> {
+  /**
+   * @param skipExternalIds source ids already in the DB. Matching items are
+   *   skipped *before* extraction so the LLM is never called for them — this is
+   *   what keeps AI usage minimal on recurring runs (only new posts cost a call).
+   */
+  async run(skipExternalIds: Set<string> = new Set()): Promise<NormalizedPromotion[]> {
     const seen = new Set<string>();
     const out: NormalizedPromotion[] = [];
     const maxItems = this.options.maxItems ?? Infinity;
@@ -62,6 +67,8 @@ export class IngestionPipeline {
 
       for (const item of items) {
         if (out.length >= maxItems) break;
+        // Already ingested this exact post → skip without an LLM call.
+        if (skipExternalIds.has(item.externalId)) continue;
         const extracted = await this.safeExtract(item);
         if (!extracted) continue;
 
