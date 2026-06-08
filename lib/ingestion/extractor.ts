@@ -53,6 +53,16 @@ function extractTags(text: string): string[] {
   return Array.from(new Set(hashtags)).slice(0, 8);
 }
 
+/** Strip URLs and tidy whitespace/markdown/trailing punctuation from a title. */
+export function sanitizeTitle(raw: string): string {
+  return raw
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/[#*_`]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[\s|·–-]+$/, "")
+    .trim();
+}
+
 /**
  * Deterministic, dependency-free extractor. Good enough to bootstrap and to
  * unit-test the pipeline; replace/augment with an LLM extractor later.
@@ -63,13 +73,18 @@ export class RegexExtractor implements PromotionExtractor {
   async extract(item: RawItem): Promise<ExtractedPromotion | null> {
     const text = item.text.trim();
     if (text.length < 10) return null;
+    // Telegram service messages / channel housekeeping — not promotions.
+    if (/^channel (created|photo|name|pinned)/i.test(text)) return null;
 
     const firstLine = text.split("\n").find((l) => l.trim().length > 0) ?? text;
     const dates = findDates(text);
     const category = guessCategory(text);
 
+    const title = sanitizeTitle(firstLine).slice(0, 140);
+    if (title.length < 8) return null;
+
     return {
-      title: firstLine.replace(/[#*_`]/g, "").trim().slice(0, 140),
+      title,
       description: text.slice(0, 1000),
       category,
       startDate: dates[0] ?? null,

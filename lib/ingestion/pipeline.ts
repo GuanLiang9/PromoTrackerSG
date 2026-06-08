@@ -28,17 +28,29 @@ function makeDedupeKey(sourceName: string, title: string): string {
  * records. Persisting (Supabase upsert) is intentionally left to the caller so
  * the pipeline stays pure and testable.
  */
+export interface PipelineOptions {
+  /**
+   * Hard cap on the number of items extracted per run. Bounds the number of
+   * LLM subrequests so the run stays within Cloudflare Workers' per-invocation
+   * subrequest limit (50 on the free plan).
+   */
+  maxItems?: number;
+}
+
 export class IngestionPipeline {
   constructor(
     private readonly adapters: SourceAdapter[],
     private readonly extractor: PromotionExtractor,
+    private readonly options: PipelineOptions = {},
   ) {}
 
   async run(): Promise<NormalizedPromotion[]> {
     const seen = new Set<string>();
     const out: NormalizedPromotion[] = [];
+    const maxItems = this.options.maxItems ?? Infinity;
 
     for (const adapter of this.adapters) {
+      if (out.length >= maxItems) break;
       let items: RawItem[] = [];
       try {
         items = await adapter.fetch();
@@ -49,6 +61,7 @@ export class IngestionPipeline {
       }
 
       for (const item of items) {
+        if (out.length >= maxItems) break;
         const extracted = await this.safeExtract(item);
         if (!extracted) continue;
 

@@ -35,13 +35,10 @@ create table if not exists public.promotions (
   status      promo_status not null default 'active',
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
-  -- Generated full-text search vector over the searchable fields.
-  search_vector tsvector generated always as (
-    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(location, '')), 'B') ||
-    setweight(to_tsvector('english', array_to_string(tags, ' ')), 'B') ||
-    setweight(to_tsvector('english', coalesce(description, '')), 'C')
-  ) stored,
+  -- Full-text search vector, maintained by a trigger (see below). A trigger is
+  -- used instead of a GENERATED column because to_tsvector() is not accepted as
+  -- immutable in a generated-column expression on managed Postgres.
+  search_vector tsvector,
   constraint promotions_dates_chk check (end_date >= start_date)
 );
 
@@ -89,6 +86,23 @@ create table if not exists public.ingestion_logs (
   message     text,
   created_at  timestamptz not null default now()
 );
+
+-- ── search_vector trigger ────────────────────────────────────────────────────
+create or replace function public.promotions_set_search_vector()
+returns trigger language plpgsql as $$
+begin
+  new.search_vector :=
+    setweight(to_tsvector('english', coalesce(new.title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(new.location, '')), 'B') ||
+    setweight(to_tsvector('english', array_to_string(new.tags, ' ')), 'B') ||
+    setweight(to_tsvector('english', coalesce(new.description, '')), 'C');
+  return new;
+end $$;
+
+drop trigger if exists promotions_search_vector on public.promotions;
+create trigger promotions_search_vector
+  before insert or update on public.promotions
+  for each row execute function public.promotions_set_search_vector();
 
 -- ── updated_at trigger ───────────────────────────────────────────────────────
 create or replace function public.set_updated_at()

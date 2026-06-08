@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "supabase db push",
-    "db:seed": "psql \"$SUPABASE_DB_URL\" -f supabase/seed.sql"
+    "db:seed": "psql \"$SUPABASE_DB_URL\" -f supabase/seed.sql",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
@@ -34,6 +37,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "@serwist/next": "^9.0.11",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -46,10 +50,12 @@
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.5.19",
     "jsdom": "^25.0.1",
+    "pg": "^8.21.0",
     "postcss": "^8.4.49",
     "serwist": "^9.0.11",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "wrangler": "^4.98.0"
   }
 }

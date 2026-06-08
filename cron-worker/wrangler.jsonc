@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "promosg-cron",
+  "main": "index.js",
+  "compatibility_date": "2025-03-01",
+  // Run every 6 hours: archive expired promos + ingest fresh ones.
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

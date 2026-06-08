@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "promosg",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "promosg"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://abbbcmpkfklwckbknmrv.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiYmJjbXBrZmtsd2NrYmtubXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NjI5ODIsImV4cCI6MjA5NjQzODk4Mn0.ZnrWyB8NR9_vDGKalUzLuS3Nb-ePcoLUcff-qS0pnxw",
+    "NEXT_PUBLIC_SITE_URL": "https://promosg.guanliang976.workers.dev",
+    "OPENROUTER_MODEL": "meta-llama/llama-3.3-70b-instruct:free"
+  }
+}
