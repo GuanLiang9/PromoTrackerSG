@@ -4,6 +4,7 @@ import { IngestionPipeline } from "@/lib/ingestion/pipeline";
 import { buildAdapters } from "@/lib/ingestion/sources";
 import { OpenRouterExtractor } from "@/lib/ingestion/openrouter-extractor";
 import { upsertPromotions } from "@/lib/ingestion/upsert";
+import { geocodeFromDictionary, geocodeLocation } from "@/lib/ingestion/geocode";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -68,6 +69,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Geocode locations so promos can appear on the map. The dictionary is free
+  // and unlimited; live Nominatim calls are capped per run to stay within the
+  // Workers subrequest budget (the rest can be filled by the backfill script).
+  const MAX_LIVE_GEOCODES = 8;
+  let liveGeocodes = 0;
+  let geocoded = 0;
+  for (const p of normalized) {
+    // Dictionary match against location + title + description (free, no network).
+    const dictText = [p.location, p.title, p.description]
+      .filter(Boolean)
+      .join(" ");
+    let coords = geocodeFromDictionary(dictText);
+    if (!coords && p.location && liveGeocodes < MAX_LIVE_GEOCODES) {
+      liveGeocodes++;
+      coords = await geocodeLocation(p.location);
+    }
+    if (coords) {
+      p.latitude = coords.lat;
+      p.longitude = coords.lng;
+      geocoded++;
+    }
+  }
+
   const result = await upsertPromotions(supabase, normalized);
 
   await supabase.from("ingestion_logs").insert({
@@ -81,6 +105,7 @@ export async function POST(request: NextRequest) {
     extractor: extractor.name,
     ai_enabled: extractor.isConfigured,
     found: normalized.length,
+    geocoded,
     ...result,
     ran_at: new Date().toISOString(),
   });

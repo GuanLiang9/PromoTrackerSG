@@ -17,7 +17,14 @@ import {
 import { CATEGORIES } from "@/lib/constants";
 import { serializeFilters } from "@/lib/promotions/search-params";
 import { cn } from "@/lib/utils";
-import type { PromoCategory, PromotionFilters } from "@/lib/types";
+import type { PromoCategory, PromotionFilters, PromotionSort } from "@/lib/types";
+
+const SORT_OPTIONS: { value: PromotionSort; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "newest", label: "New" },
+  { value: "ending", label: "Ending soon" },
+  { value: "trending", label: "Trending" },
+];
 
 export function SearchControls({
   initial,
@@ -32,6 +39,7 @@ export function SearchControls({
   const [from, setFrom] = React.useState(initial.from ?? "");
   const [to, setTo] = React.useState(initial.to ?? "");
   const [location, setLocation] = React.useState(initial.location ?? "");
+  const [sort, setSort] = React.useState<PromotionSort | undefined>(initial.sort);
 
   function apply(next?: Partial<PromotionFilters>) {
     const filters: PromotionFilters = {
@@ -40,10 +48,17 @@ export function SearchControls({
       from: from || undefined,
       to: to || undefined,
       location: location || undefined,
+      sort,
       ...next,
     };
     const qs = serializeFilters(filters);
     router.push(qs ? `/search?${qs}` : "/search");
+  }
+
+  function selectSort(value: PromotionSort) {
+    const nextSort = sort === value ? undefined : value;
+    setSort(nextSort);
+    apply({ sort: nextSort });
   }
 
   function toggleCategory(cat: PromoCategory) {
@@ -56,6 +71,7 @@ export function SearchControls({
     categories.length + (from ? 1 : 0) + (to ? 1 : 0) + (location ? 1 : 0);
 
   return (
+    <div className="space-y-3">
     <div className="flex items-center gap-2">
       <form
         className="relative flex-1"
@@ -169,6 +185,28 @@ export function SearchControls({
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+
+      <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4">
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+          Sort:
+        </span>
+        {SORT_OPTIONS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => selectSort(s.value)}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              sort === s.value
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground hover:bg-accent",
+            )}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

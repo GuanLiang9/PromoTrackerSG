@@ -74,6 +74,13 @@ export interface Profile {
   created_at: string;
 }
 
+/**
+ * Sort/section view for the search results. Each value mirrors a dashboard
+ * section: it implies both an ordering and (for today/newest/ending) a date
+ * window applied in `searchPromotions`.
+ */
+export type PromotionSort = "today" | "newest" | "ending" | "trending";
+
 /** Search / filter parameters parsed from the URL. */
 export interface PromotionFilters {
   query?: string;
@@ -81,6 +88,7 @@ export interface PromotionFilters {
   from?: string; // ISO date
   to?: string; // ISO date
   location?: string;
+  sort?: PromotionSort;
 }
 
 export type CalendarView = "month" | "week" | "day";

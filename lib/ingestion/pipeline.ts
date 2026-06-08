@@ -10,6 +10,9 @@ export interface NormalizedPromotion extends ExtractedPromotion {
   sourceName: string;
   sourceUrl: string | null;
   imageUrl: string | null;
+  /** Resolved coordinates (set by the geocoding step, if any). */
+  latitude?: number | null;
+  longitude?: number | null;
   /** Hash used for deduplication. */
   dedupeKey: string;
 }

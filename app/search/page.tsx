@@ -9,6 +9,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 export const metadata: Metadata = { title: "Search" };
 export const dynamic = "force-dynamic";
 
+const SORT_LABELS: Record<string, string> = {
+  today: "Today’s promotions",
+  newest: "New",
+  ending: "Ending soon",
+  trending: "Trending",
+};
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -36,6 +43,11 @@ export default async function SearchPage({
 
       {hasFilters ? (
         <>
+          {filters.sort && (
+            <h2 className="text-lg font-bold tracking-tight">
+              {SORT_LABELS[filters.sort]}
+            </h2>
+          )}
           <p className="text-sm text-muted-foreground">
             {results.length} result{results.length === 1 ? "" : "s"}
           </p>

@@ -27,6 +27,8 @@ export function toRow(p: NormalizedPromotion) {
     start_date: start,
     end_date: end,
     location: p.location,
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
     image_url: p.imageUrl,
     source_name: p.sourceName,
     source_url: p.sourceUrl,

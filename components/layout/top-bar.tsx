@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, CalendarDays, LayoutGrid, Search } from "lucide-react";
+import { Bookmark, CalendarDays, LayoutGrid, MapPin, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { APP_NAME } from "@/lib/constants";
 
@@ -7,6 +7,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/search", label: "Search", icon: Search },
+  { href: "/map", label: "Map", icon: MapPin },
   { href: "/saved", label: "Saved", icon: Bookmark },
 ];
 

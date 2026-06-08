@@ -66,8 +66,20 @@ GET https://promosg.guanliang976.workers.dev/api/cron/expire?secret=<CRON_SECRET
 - **sources.ts** — public Telegram channels (read via `t.me/s/<channel>` web preview, no auth) + RSS feeds.
 - **adapters.ts** — `TelegramAdapter`, `RssAdapter`.
 - **openrouter-extractor.ts** — LLM extraction → structured promo JSON; regex fallback.
+- **geocode.ts** — free geocoding (SG mall/landmark dictionary + OpenStreetMap Nominatim, no API key, no AI). Matches location text and promo title/description; bounds-checked to Singapore.
 - **pipeline.ts** — fetch → skip already-seen (`external_id`) → extract → dedupe (`dedupe_key`), capped per run to stay under the Workers 50-subrequest limit.
-- **upsert.ts** — maps to `promotions` rows and upserts on `dedupe_key`.
+- **upsert.ts** — maps to `promotions` rows (incl. `latitude`/`longitude`) and upserts on `dedupe_key`.
+
+## Search sort + Map
+- **Sort views:** `/search?sort=today|newest|ending|trending` reproduce each
+  dashboard section as a card grid; the dashboard "See all" links point here and
+  the Search page has a visible **Sort** pill row. Logic lives in
+  `searchPromotions()` (`lib/promotions/queries.ts`).
+- **Map tab** (`/map`): client-only Leaflet + OpenStreetMap (no API key), dynamic
+  `ssr:false`. `getPromotionsWithCoords()` feeds category-colored pins; tap a pin
+  for a mini-card + "View details". Geocoding (above) populates coordinates.
+- **Backfill coords once:** `node scripts/geocode.mjs` (uses the pooler
+  `SUPABASE_DB_URL`) — geocodes active promos lacking coordinates.
 
 ## Known limitations
 - **Free OpenRouter models are rate-limited (429)**: when the shared free pool is

@@ -61,10 +61,10 @@ export default async function DashboardPage() {
 
       {!isSupabaseConfigured && <SetupNotice />}
 
-      <Section title="Today’s promotions" promotions={sections.today} href="/calendar" />
-      <Section title="New" promotions={sections.newest} href="/search" />
-      <Section title="Ending soon" promotions={sections.endingSoon} />
-      <Section title="Trending" promotions={sections.trending} />
+      <Section title="Today’s promotions" promotions={sections.today} href="/search?sort=today" />
+      <Section title="New" promotions={sections.newest} href="/search?sort=newest" />
+      <Section title="Ending soon" promotions={sections.endingSoon} href="/search?sort=ending" />
+      <Section title="Trending" promotions={sections.trending} href="/search?sort=trending" />
       <Section title="Saved" promotions={sections.saved} href="/saved" />
     </div>
   );

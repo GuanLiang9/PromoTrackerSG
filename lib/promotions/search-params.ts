@@ -1,10 +1,16 @@
-import type { PromoCategory, PromotionFilters } from "@/lib/types";
+import type { PromoCategory, PromotionFilters, PromotionSort } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/constants";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
+const SORTS: PromotionSort[] = ["today", "newest", "ending", "trending"];
+
 function isCategory(value: string): value is PromoCategory {
   return value in CATEGORY_META;
+}
+
+function isSort(value: string | undefined): value is PromotionSort {
+  return value !== undefined && (SORTS as string[]).includes(value);
 }
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -25,12 +31,15 @@ export function parsePromotionFilters(params: SearchParams): PromotionFilters {
     .map((c) => c.trim())
     .filter(isCategory);
 
+  const sortRaw = first(params.sort);
+
   return {
     query: first(params.q ?? params.query),
     categories: categories.length > 0 ? categories : undefined,
     from: first(params.from),
     to: first(params.to),
     location: first(params.location),
+    sort: isSort(sortRaw) ? sortRaw : undefined,
   };
 }
 
@@ -44,5 +53,6 @@ export function serializeFilters(filters: PromotionFilters): string {
   if (filters.from) sp.set("from", filters.from);
   if (filters.to) sp.set("to", filters.to);
   if (filters.location) sp.set("location", filters.location);
+  if (filters.sort) sp.set("sort", filters.sort);
   return sp.toString();
 }

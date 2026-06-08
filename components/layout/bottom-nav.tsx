@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, CalendarDays, LayoutGrid, Search } from "lucide-react";
+import { Bookmark, CalendarDays, LayoutGrid, MapPin, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/dashboard", label: "Home", icon: LayoutGrid },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/search", label: "Search", icon: Search },
+  { href: "/map", label: "Map", icon: MapPin },
   { href: "/saved", label: "Saved", icon: Bookmark },
 ];
 

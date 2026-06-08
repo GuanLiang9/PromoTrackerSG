@@ -49,6 +49,24 @@ export async function getPromotionsInRange(
   return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
 }
 
+/** Active promotions that have coordinates, for the map view. */
+export async function getPromotionsWithCoords(): Promise<Promotion[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const savedIds = await getSavedIds();
+
+  const { data, error } = await supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .not("latitude", "is", null)
+    .not("longitude", "is", null)
+    .limit(500);
+
+  if (error) throw error;
+  return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+}
+
 export async function getPromotionById(
   id: string,
 ): Promise<Promotion | null> {
@@ -145,9 +163,39 @@ export async function searchPromotions(
   if (filters.to) q = q.lte("start_date", filters.to);
   if (filters.location) q = q.ilike("location", `%${filters.location}%`);
 
-  const { data, error } = await q
-    .order("start_date", { ascending: true })
-    .limit(100);
+  // The `sort` value mirrors a dashboard section: it applies a date window
+  // and ordering that match getDashboardSections() exactly.
+  const today = toDateKey(new Date());
+  switch (filters.sort) {
+    case "today":
+      q = q
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: true });
+      break;
+    case "newest": {
+      const last7Days = toDateKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+      q = q
+        .gte("created_at", last7Days)
+        .order("created_at", { ascending: false });
+      break;
+    }
+    case "ending": {
+      const in3Days = toDateKey(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+      q = q
+        .gte("end_date", today)
+        .lte("end_date", in3Days)
+        .order("end_date", { ascending: true });
+      break;
+    }
+    case "trending":
+      q = q.order("created_at", { ascending: false });
+      break;
+    default:
+      q = q.order("start_date", { ascending: true });
+  }
+
+  const { data, error } = await q.limit(100);
 
   if (error) throw error;
   return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
