@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 backdrop-blur-lg md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
         {ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -27,10 +27,19 @@ export function BottomNav() {
                 href={href}
                 className={cn(
                   "flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors",
-                  active ? "text-primary" : "text-muted-foreground",
+                  active ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-200",
+                    active
+                      ? "bg-brand/10 text-brand scale-110"
+                      : "hover:bg-accent",
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
                 {label}
               </Link>
             </li>

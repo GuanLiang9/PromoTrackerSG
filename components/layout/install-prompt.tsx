@@ -27,7 +27,7 @@ export function InstallPrompt() {
   if (!deferred || hidden) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-20 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border bg-card p-3 shadow-lg md:bottom-4">
+    <div className="fixed inset-x-3 bottom-[calc(5rem_+_env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border bg-card p-3 shadow-lg md:bottom-4">
       <div className="flex-1">
         <p className="text-sm font-semibold">Install PromoSG</p>
         <p className="text-xs text-muted-foreground">

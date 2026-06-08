@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0d14" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -58,7 +58,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TopBar />
-          <main className="container max-w-5xl pb-24 pt-4 md:pb-10">
+          <main className="container max-w-5xl pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-4 md:pb-10">
             {children}
           </main>
           <BottomNav />

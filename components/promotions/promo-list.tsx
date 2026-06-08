@@ -1,5 +1,15 @@
+import { SearchX, Inbox } from "lucide-react";
 import { PromoCard } from "@/components/promotions/promo-card";
 import type { Promotion } from "@/lib/types";
+
+function EmptyState({ message, icon: Icon }: { message: string; icon: typeof Inbox }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
+      <Icon className="h-8 w-8 text-muted-foreground/40" strokeWidth={1.5} />
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
 
 export function PromoGrid({
   promotions,
@@ -9,11 +19,7 @@ export function PromoGrid({
   empty?: string;
 }) {
   if (promotions.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-        {empty}
-      </p>
-    );
+    return <EmptyState message={empty} icon={SearchX} />;
   }
 
   return (
@@ -29,7 +35,7 @@ export function PromoGrid({
 export function PromoRow({ promotions }: { promotions: Promotion[] }) {
   if (promotions.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Nothing here yet.</p>
+      <p className="text-sm text-muted-foreground/60">Nothing here yet.</p>
     );
   }
   return (

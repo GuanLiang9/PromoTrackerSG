@@ -16,22 +16,27 @@ export function PromoCard({
   const ending = endingInLabel(promotion.endDate);
 
   return (
-    <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       <Link href={`/promotions/${promotion.id}`} className="block">
         {!compact && promotion.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={promotion.imageUrl}
-            alt=""
-            className="h-36 w-full object-cover"
-            loading="lazy"
-          />
+          <div className="relative h-36 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={promotion.imageUrl}
+              alt=""
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+            {/* gradient scrim over image */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          </div>
         )}
         <div className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-2">
             <CategoryBadge category={promotion.category} />
             {ending && (
-              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-destructive" />
                 {ending}
               </span>
             )}
@@ -56,6 +61,9 @@ export function PromoCard({
               </span>
             )}
           </div>
+          {!compact && promotion.sourceName && (
+            <p className="text-xs text-muted-foreground/60">{promotion.sourceName}</p>
+          )}
         </div>
       </Link>
       <div className="absolute right-2 top-2">

@@ -6,10 +6,14 @@ export default function manifest(): MetadataRoute.Manifest {
     name: `${APP_NAME} — Singapore Promotions`,
     short_name: APP_NAME,
     description: APP_DESCRIPTION,
+    id: "/",
     start_url: "/dashboard",
+    scope: "/",
     display: "standalone",
-    background_color: "#0a0a0b",
-    theme_color: "#0a0a0b",
+    // @ts-expect-error — display_override not yet in Next.js types but is valid
+    display_override: ["standalone", "minimal-ui"],
+    background_color: "#0b0d14",
+    theme_color: "#0b0d14",
     orientation: "portrait",
     categories: ["lifestyle", "shopping", "food"],
     icons: [
