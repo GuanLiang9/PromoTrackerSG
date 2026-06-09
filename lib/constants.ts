@@ -107,6 +107,39 @@ export function getCategoryMeta(category: PromoCategory): CategoryMeta {
   return CATEGORY_META[category];
 }
 
+/**
+ * User-selectable interests → the categories they map to. Used for the
+ * personalized "Recommended For You" ranking. Stored as keys in
+ * `user_preferences.interests`.
+ */
+export interface InterestMeta {
+  key: string;
+  label: string;
+  emoji: string;
+  categories: PromoCategory[];
+}
+
+export const INTERESTS: InterestMeta[] = [
+  { key: "food", label: "Food", emoji: "🍜", categories: ["food_beverage"] },
+  { key: "cafes", label: "Cafes", emoji: "☕", categories: ["food_beverage"] },
+  { key: "buffets", label: "Buffets", emoji: "🍽️", categories: ["food_beverage"] },
+  { key: "shopping", label: "Shopping", emoji: "🛍️", categories: ["shopping"] },
+  { key: "electronics", label: "Electronics", emoji: "🎧", categories: ["shopping"] },
+  { key: "travel", label: "Travel", emoji: "✈️", categories: ["travel"] },
+  { key: "family", label: "Family Activities", emoji: "👨‍👩‍👧", categories: ["attractions", "events", "lifestyle"] },
+  { key: "entertainment", label: "Entertainment", emoji: "🎬", categories: ["entertainment"] },
+];
+
+/** Resolve a set of interest keys to the union of their categories. */
+export function categoriesForInterests(keys: string[]): PromoCategory[] {
+  const set = new Set<PromoCategory>();
+  for (const k of keys) {
+    const meta = INTERESTS.find((i) => i.key === k);
+    meta?.categories.forEach((c) => set.add(c));
+  }
+  return [...set];
+}
+
 export const APP_NAME = "PromoSG";
 export const APP_DESCRIPTION =
   "Discover Singapore promotions, deals and events on a clean calendar.";

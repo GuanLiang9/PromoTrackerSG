@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { mapRowToPromotion } from "@/lib/promotions/mappers";
 import { toDateKey } from "@/lib/calendar/date";
+import { categoriesForInterests } from "@/lib/constants";
 import type {
   Promotion,
   PromotionFilters,
@@ -199,6 +200,115 @@ export async function searchPromotions(
 
   if (error) throw error;
   return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+}
+
+/**
+ * Personalized "Recommended For You". For a signed-in user we rank active
+ * promotions by base_score, boosting those matching the user's chosen interests
+ * and the categories they've previously saved. Anonymous users (or users with
+ * no signal) get the top-scored deals as a sensible fallback.
+ */
+export async function getRecommendations(limit = 12): Promise<{
+  promotions: Promotion[];
+  personalized: boolean;
+}> {
+  if (!isSupabaseConfigured) return { promotions: [], personalized: false };
+  const supabase = await createClient();
+  const savedIds = await getSavedIds();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Gather interest + saved-category signal.
+  let interestCats: string[] = [];
+  if (user) {
+    const { data: prefs } = await supabase
+      .from("user_preferences")
+      .select("interests")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    interestCats = categoriesForInterests(prefs?.interests ?? []);
+  }
+  const savedCats = new Set<string>();
+  if (savedIds.size > 0) {
+    const { data: savedRows } = await supabase
+      .from("promotions")
+      .select("category")
+      .in("id", Array.from(savedIds));
+    (savedRows ?? []).forEach((r) => savedCats.add(r.category as string));
+  }
+
+  // Pull a generous pool of top-scored active deals, then re-rank locally.
+  const { data, error } = await supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .order("base_score", { ascending: false, nullsFirst: false })
+    .limit(60);
+  if (error) throw error;
+
+  const pool = (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+  const signal = interestCats.length > 0 || savedCats.size > 0;
+
+  const ranked = pool
+    .filter((p) => !p.isSaved)
+    .map((p) => {
+      let boost = 0;
+      if (interestCats.includes(p.category)) boost += 30;
+      if (savedCats.has(p.category)) boost += 15;
+      return { p, rank: (p.baseScore ?? 0) + boost };
+    })
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, limit)
+    .map((x) => x.p);
+
+  return { promotions: ranked, personalized: Boolean(user && signal) };
+}
+
+/** Upcoming + currently-running active promotions for the Timeline view. */
+export async function getUpcomingPromotions(
+  days = 60,
+  categories?: string[],
+): Promise<Promotion[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const savedIds = await getSavedIds();
+  const today = toDateKey(new Date());
+  const until = toDateKey(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+
+  let q = supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .gte("end_date", today) // still running or future
+    .lte("start_date", until) // starts within the window
+    .order("start_date", { ascending: true })
+    .limit(200);
+
+  if (categories && categories.length > 0) q = q.in("category", categories);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+}
+
+export interface DailySummary {
+  food?: string;
+  shopping?: string;
+  family?: string;
+}
+
+/** Today's cached AI/template deal summary (public read). */
+export async function getDailySummary(): Promise<DailySummary | null> {
+  if (!isSupabaseConfigured) return null;
+  const supabase = await createClient();
+  const today = toDateKey(new Date());
+  const { data } = await supabase
+    .from("daily_summaries")
+    .select("content")
+    .eq("summary_date", today)
+    .maybeSingle();
+  return (data?.content as DailySummary) ?? null;
 }
 
 export async function getSavedPromotions(): Promise<Promotion[]> {

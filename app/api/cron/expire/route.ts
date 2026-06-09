@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { toDateKey } from "@/lib/calendar/date";
 import { rescoreActivePromotions } from "@/lib/scoring/rescore";
+import { generateDailySummary } from "@/lib/ai/summarize";
 
 export const dynamic = "force-dynamic";
 
@@ -41,10 +42,29 @@ export async function POST(request: NextRequest) {
   // time-remaining and saved_count factors stay fresh.
   const rescore = await rescoreActivePromotions(supabase);
 
+  // Generate today's deal summary (≤1 AI call/day, budget-guarded, template
+  // fallback). Wrapped so a summary failure never breaks the expiry job.
+  let summarySource: string | undefined;
+  try {
+    const summary = await generateDailySummary(supabase);
+    await supabase.from("daily_summaries").upsert(
+      {
+        summary_date: today,
+        content: summary.content,
+        source: summary.source,
+      },
+      { onConflict: "summary_date" },
+    );
+    summarySource = summary.source;
+  } catch (err) {
+    summarySource = err instanceof Error ? `error: ${err.message}` : "error";
+  }
+
   return NextResponse.json({
     archived: data?.length ?? 0,
     scored: rescore.scored,
     score_error: rescore.error,
+    summary: summarySource,
     ran_at: today,
   });
 }

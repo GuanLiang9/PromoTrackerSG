@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Sparkles } from "lucide-react";
 import { PromoRow } from "@/components/promotions/promo-list";
 import { SetupNotice } from "@/components/layout/setup-notice";
 import { Button } from "@/components/ui/button";
-import { getDashboardSections } from "@/lib/promotions/queries";
+import {
+  getDashboardSections,
+  getRecommendations,
+  getDailySummary,
+} from "@/lib/promotions/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { CATEGORIES } from "@/lib/constants";
 import type { Promotion } from "@/lib/types";
@@ -45,7 +49,19 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const sections = await getDashboardSections();
+  const [sections, recs, summary] = await Promise.all([
+    getDashboardSections(),
+    getRecommendations(),
+    getDailySummary(),
+  ]);
+
+  const summaryItems = summary
+    ? ([
+        { label: "🍜 Best food deals", text: summary.food },
+        { label: "🛍️ Best shopping deals", text: summary.shopping },
+        { label: "👨‍👩‍👧 Best family activities", text: summary.family },
+      ].filter((s) => s.text) as { label: string; text: string }[])
+    : [];
 
   return (
     <div className="space-y-8">
@@ -68,13 +84,56 @@ export default async function DashboardPage() {
               Deals, events and discounts across Singapore — all in one place.
             </p>
           </div>
-          <Button asChild className="shrink-0">
-            <Link href="/calendar">
-              <CalendarDays className="h-4 w-4" /> Open calendar
-            </Link>
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button asChild variant="outline">
+              <Link href="/timeline">
+                <Clock className="h-4 w-4" /> Timeline
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/calendar">
+                <CalendarDays className="h-4 w-4" /> Calendar
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Today's AI deal summary */}
+      {summaryItems.length > 0 && (
+        <section className="animate-fade-in-up rounded-2xl border bg-gradient-to-br from-brand/5 to-transparent p-5">
+          <h2 className="mb-3 text-base font-semibold tracking-tight">
+            Today&apos;s best deals
+          </h2>
+          <ul className="space-y-2.5">
+            {summaryItems.map((s) => (
+              <li key={s.label} className="text-sm">
+                <span className="font-medium">{s.label}:</span>{" "}
+                <span className="text-muted-foreground">{s.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Recommended For You */}
+      {recs.promotions.length > 0 && (
+        <section className="animate-fade-in-up space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="inline-flex items-center gap-1.5 text-base font-semibold tracking-tight">
+              <Sparkles className="h-4 w-4 text-brand" />
+              {recs.personalized ? "Recommended for you" : "Top picks"}
+            </h2>
+            <Link
+              href="/interests"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              {recs.personalized ? "Edit interests" : "Set interests"}
+            </Link>
+          </div>
+          <PromoRow promotions={recs.promotions} />
+        </section>
+      )}
 
       {/* Category quick-browse */}
       <div className="animate-fade-in-up animation-delay-100">
