@@ -34,10 +34,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0d14" },
-  ],
+  // NOTE: themeColor is intentionally NOT set here. Media-query theme-color
+  // metas follow the OS scheme and would win over our in-app toggle (browsers
+  // pick the first matching meta in DOM order). ThemeColorMeta manages a single
+  // theme-color meta that tracks the app's actual light/dark state instead.
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

@@ -2,6 +2,10 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
+  // Only apply hover: styles on devices that actually support hover (mouse).
+  // On touch devices this prevents the "first tap = hover, second tap = click"
+  // double-tap bug on links/buttons.
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
