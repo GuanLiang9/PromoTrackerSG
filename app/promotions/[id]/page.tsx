@@ -8,6 +8,7 @@ import {
   Tag,
 } from "lucide-react";
 import { CategoryBadge } from "@/components/promotions/category-badge";
+import { ScorePanel } from "@/components/promotions/score-badge";
 import { SavedButton } from "@/components/promotions/saved-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,8 @@ export default async function PromotionPage({
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
         {promo.title}
       </h1>
+
+      <ScorePanel score={promo.baseScore} reasons={promo.scoreReasons} />
 
       <div className="grid gap-2 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-2">

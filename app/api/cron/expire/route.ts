@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { toDateKey } from "@/lib/calendar/date";
+import { rescoreActivePromotions } from "@/lib/scoring/rescore";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ archived: data?.length ?? 0, ran_at: today });
+  // Recompute Worth-Going base scores (deterministic, no AI) after expiry so
+  // time-remaining and saved_count factors stay fresh.
+  const rescore = await rescoreActivePromotions(supabase);
+
+  return NextResponse.json({
+    archived: data?.length ?? 0,
+    scored: rescore.scored,
+    score_error: rescore.error,
+    ran_at: today,
+  });
 }
 
 // Allow GET for easy manual / cron-provider invocation.

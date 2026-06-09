@@ -36,6 +36,11 @@ export interface PromotionRow {
   status: PromoStatus;
   created_at: string;
   updated_at: string;
+  discount_pct: number | null;
+  savings_amount: number | null;
+  base_score: number | null;
+  score_reasons: string[];
+  saved_count: number;
 }
 
 /** View model used throughout the UI. */
@@ -57,6 +62,14 @@ export interface Promotion {
   status: PromoStatus;
   createdAt: string;
   updatedAt: string;
+  discountPct: number | null;
+  savingsAmount: number | null;
+  /** Precomputed deterministic 0-100 base score (no personalization). */
+  baseScore: number | null;
+  /** Human-readable reasons backing the base score. */
+  scoreReasons: string[];
+  /** Number of users who have saved this promotion. */
+  savedCount: number;
   /** Whether the current user has bookmarked this promotion. */
   isSaved?: boolean;
 }

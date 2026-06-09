@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { CategoryBadge } from "@/components/promotions/category-badge";
+import { ScoreChip } from "@/components/promotions/score-badge";
 import { SavedButton } from "@/components/promotions/saved-button";
 import { formatDateRange, endingInLabel } from "@/lib/format";
 import type { Promotion } from "@/lib/types";
@@ -33,7 +34,10 @@ export function PromoCard({
         )}
         <div className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-2">
-            <CategoryBadge category={promotion.category} />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <CategoryBadge category={promotion.category} />
+              <ScoreChip score={promotion.baseScore} />
+            </div>
             {ending && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
                 <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-destructive" />

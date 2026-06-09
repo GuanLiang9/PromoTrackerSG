@@ -22,6 +22,11 @@ function makePromo(id: string, start: string, end: string): Promotion {
     status: "active",
     createdAt: "",
     updatedAt: "",
+    discountPct: null,
+    savingsAmount: null,
+    baseScore: null,
+    scoreReasons: [],
+    savedCount: 0,
   };
 }
 

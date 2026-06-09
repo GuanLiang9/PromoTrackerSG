@@ -23,6 +23,11 @@ export function mapRowToPromotion(
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    discountPct: row.discount_pct ?? null,
+    savingsAmount: row.savings_amount ?? null,
+    baseScore: row.base_score ?? null,
+    scoreReasons: row.score_reasons ?? [],
+    savedCount: row.saved_count ?? 0,
     isSaved: savedIds ? savedIds.has(row.id) : undefined,
   };
 }
