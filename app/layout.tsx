@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { ThemeColorMeta } from "@/components/layout/theme-color-meta";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { InstallPrompt } from "@/components/layout/install-prompt";
@@ -57,6 +58,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <ThemeColorMeta />
           <TopBar />
           <main className="container max-w-5xl pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-4 md:pb-10">
             {children}
