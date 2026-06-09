@@ -1,23 +1,39 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
 const COLORS = { dark: "#0b0d14", light: "#ffffff" };
 
-export function ThemeColorMeta() {
-  const { resolvedTheme } = useTheme();
-
-  useEffect(() => {
-    const color = resolvedTheme === "dark" ? COLORS.dark : COLORS.light;
-    // Remove all existing theme-color metas (including media-query variants) and
-    // insert a single fresh one so Chrome re-evaluates the status bar colour.
+function applyThemeColor() {
+  const isDark = document.documentElement.classList.contains("dark");
+  const color = isDark ? COLORS.dark : COLORS.light;
+  // Keep one persistent non-media meta and update content in-place so Chrome
+  // detects the change and repaints the status bar.
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([media])');
+  if (!meta) {
     document.querySelectorAll('meta[name="theme-color"]').forEach((el) => el.remove());
-    const meta = document.createElement("meta");
+    meta = document.createElement("meta") as HTMLMetaElement;
     meta.name = "theme-color";
-    meta.content = color;
     document.head.appendChild(meta);
-  }, [resolvedTheme]);
+  }
+  meta.content = color;
+}
+
+export function ThemeColorMeta() {
+  useEffect(() => {
+    // Apply immediately on mount (covers first load in dark mode)
+    applyThemeColor();
+
+    // MutationObserver fires synchronously when next-themes flips html.class,
+    // before any re-render, so the status bar updates with zero lag.
+    const observer = new MutationObserver(applyThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return null;
 }
