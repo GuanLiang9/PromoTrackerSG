@@ -39,9 +39,9 @@ export function PromoRow({ promotions }: { promotions: Promotion[] }) {
     );
   }
   return (
-    <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+    <div className="no-scrollbar -mx-4 flex items-stretch snap-x gap-3 overflow-x-auto px-4 pb-1">
       {promotions.map((p) => (
-        <div key={p.id} className="w-64 shrink-0 snap-start">
+        <div key={p.id} className="flex w-64 shrink-0 snap-start">
           <PromoCard promotion={p} />
         </div>
       ))}
