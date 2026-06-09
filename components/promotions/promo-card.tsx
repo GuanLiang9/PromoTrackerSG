@@ -5,6 +5,8 @@ import { CategoryBadge } from "@/components/promotions/category-badge";
 import { ScoreChip } from "@/components/promotions/score-badge";
 import { SavedButton } from "@/components/promotions/saved-button";
 import { formatDateRange, endingInLabel } from "@/lib/format";
+import { getCategoryMeta } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { Promotion } from "@/lib/types";
 
 export function PromoCard({
@@ -15,21 +17,29 @@ export function PromoCard({
   compact?: boolean;
 }) {
   const ending = endingInLabel(promotion.endDate);
+  const meta = getCategoryMeta(promotion.category);
 
   return (
-    <Card className="group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <Link href={`/promotions/${promotion.id}`} className="block">
-        {!compact && promotion.imageUrl && (
-          <div className="relative h-36 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={promotion.imageUrl}
-              alt=""
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-            {/* gradient scrim over image */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+    <Card className="group relative flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+      <Link href={`/promotions/${promotion.id}`} className="flex flex-1 flex-col">
+        {!compact && (
+          <div className="relative h-36 shrink-0 overflow-hidden">
+            {promotion.imageUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={promotion.imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+              </>
+            ) : (
+              <div className={cn("flex h-full w-full items-center justify-center", meta.chipClass)}>
+                <span className="text-5xl opacity-50 select-none">{meta.emoji}</span>
+              </div>
+            )}
           </div>
         )}
         <div className="space-y-2 p-4">
@@ -70,7 +80,7 @@ export function PromoCard({
           )}
         </div>
       </Link>
-      <div className="absolute right-2 top-2">
+      <div className="absolute right-2 top-2 z-10">
         <SavedButton
           promotionId={promotion.id}
           initialSaved={promotion.isSaved ?? false}

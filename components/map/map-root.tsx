@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Crosshair, X } from "lucide-react";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, getCategoryMeta } from "@/lib/constants";
 import { formatDateRange } from "@/lib/format";
 import { haversineKm } from "@/lib/geo/distance";
 import { computeHotZones } from "@/lib/geo/zones";
@@ -23,11 +23,29 @@ const MapView = dynamic(() => import("@/components/map/map-view"), {
   ),
 });
 
-export function MapRoot({ promotions }: { promotions: Promotion[] }) {
+export function MapRoot({
+  promotions,
+  focusId,
+}: {
+  promotions: Promotion[];
+  focusId?: string | null;
+}) {
   const [active, setActive] = React.useState<Set<PromoCategory>>(new Set());
   const [selected, setSelected] = React.useState<Promotion | null>(null);
   const [flyTarget, setFlyTarget] = React.useState<FlyTarget | null>(null);
   const [userPos, setUserPos] = React.useState<{ lat: number; lng: number } | null>(null);
+
+  // Focus a specific promo when arriving from a deep link (?id=…)
+  React.useEffect(() => {
+    if (!focusId) return;
+    const p = promotions.find((x) => x.id === focusId);
+    if (p?.latitude != null && p.longitude != null) {
+      setSelected(p);
+      setFlyTarget({ lat: p.latitude, lng: p.longitude, zoom: 16, nonce: Date.now() });
+    }
+  // Run once on mount only
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const visible = React.useMemo(
     () =>
@@ -152,7 +170,7 @@ export function MapRoot({ promotions }: { promotions: Promotion[] }) {
               <X className="h-4 w-4" />
             </button>
             <Link href={`/promotions/${selected.id}`} className="flex gap-3 p-3">
-              {selected.imageUrl && (
+              {selected.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={selected.imageUrl}
@@ -160,6 +178,13 @@ export function MapRoot({ promotions }: { promotions: Promotion[] }) {
                   className="h-20 w-20 shrink-0 rounded-xl object-cover"
                   loading="lazy"
                 />
+              ) : (
+                <div className={cn(
+                  "flex h-20 w-20 shrink-0 items-center justify-center rounded-xl text-3xl",
+                  getCategoryMeta(selected.category).chipClass,
+                )}>
+                  {getCategoryMeta(selected.category).emoji}
+                </div>
               )}
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-1.5">

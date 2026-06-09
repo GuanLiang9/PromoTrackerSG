@@ -6,6 +6,7 @@ import {
   ExternalLink,
   MapPin,
   Tag,
+  ChevronLeft,
 } from "lucide-react";
 import { CategoryBadge } from "@/components/promotions/category-badge";
 import { ScorePanel } from "@/components/promotions/score-badge";
@@ -41,10 +42,10 @@ export default async function PromotionPage({
   return (
     <article className="mx-auto max-w-2xl space-y-5">
       <Link
-        href="/calendar"
-        className="text-sm text-muted-foreground hover:text-foreground"
+        href="/dashboard"
+        className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← Back to calendar
+        <ChevronLeft className="h-4 w-4" /> Back
       </Link>
 
       {promo.imageUrl && (
@@ -75,10 +76,20 @@ export default async function PromotionPage({
           {formatDateRange(promo.startDate, promo.endDate)}
         </span>
         {promo.location && (
-          <span className="inline-flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            {promo.location}
-          </span>
+          promo.latitude != null && promo.longitude != null ? (
+            <Link
+              href={`/map?id=${promo.id}`}
+              className="inline-flex items-center gap-2 text-brand underline-offset-2 hover:underline"
+            >
+              <MapPin className="h-4 w-4" />
+              {promo.location}
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {promo.location}
+            </span>
+          )
         )}
         {promo.sourceName && (
           <span className="inline-flex items-center gap-2">

@@ -7,12 +7,17 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 export const metadata: Metadata = { title: "Map" };
 export const dynamic = "force-dynamic";
 
-export default async function MapPage() {
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string }>;
+}) {
+  const { id } = await searchParams;
   const promotions = await getPromotionsWithCoords();
 
   if (!isSupabaseConfigured) {
     return <SetupNotice />;
   }
 
-  return <MapRoot promotions={promotions} />;
+  return <MapRoot promotions={promotions} focusId={id ?? null} />;
 }
