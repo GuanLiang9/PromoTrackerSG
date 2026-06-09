@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Sparkles, UtensilsCrossed } from "lucide-react";
 import { PromoRow } from "@/components/promotions/promo-list";
 import { SetupNotice } from "@/components/layout/setup-notice";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/promotions/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { CATEGORIES } from "@/lib/constants";
+import { FOOD_SPOTS, CUISINE_META } from "@/lib/food/spots";
 import type { Promotion } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -150,6 +151,42 @@ export default async function DashboardPage() {
               {cat.emoji} {cat.label}
             </Link>
           ))}
+        </div>
+      </div>
+
+      {/* Where to Eat teaser */}
+      <div className="animate-fade-in-up animation-delay-150">
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <div className="flex items-center justify-between px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-lg">🍜</span>
+              <div>
+                <h2 className="text-sm font-semibold">Where to Eat in Singapore</h2>
+                <p className="text-xs text-muted-foreground">{FOOD_SPOTS.length} curated spots · all cuisines</p>
+              </div>
+            </div>
+            <Link
+              href="/eat"
+              className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+            >
+              Explore <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {/* Cuisine emoji strip */}
+          <div className="no-scrollbar flex gap-3 overflow-x-auto px-5 py-4">
+            {(Object.entries(CUISINE_META) as [string, typeof CUISINE_META[keyof typeof CUISINE_META]][]).map(([key, meta]) => (
+              <Link
+                key={key}
+                href={`/eat?cuisine=${key}`}
+                className="flex shrink-0 flex-col items-center gap-1"
+              >
+                <span className={`flex h-12 w-12 items-center justify-center rounded-2xl text-2xl ${meta.bg}`}>
+                  {meta.emoji}
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground">{meta.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
