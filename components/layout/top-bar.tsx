@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NavLinks } from "@/components/layout/nav-links";
 import { APP_NAME } from "@/lib/constants";
 
@@ -13,8 +12,6 @@ export function TopBar() {
         </Link>
 
         <NavLinks />
-
-        <ThemeToggle />
       </div>
     </header>
   );
