@@ -17,6 +17,12 @@ export function toRow(p: NormalizedPromotion) {
   const start = p.startDate ?? toDateKey(today);
   let end = p.endDate ?? toDateKey(new Date(today.getTime() + 30 * DAY));
   if (end < start) end = start;
+  // Clamp end_date: if it's already in the past keep start but push end to
+  // at least today so the promotion stays visible (handles mis-extracted dates).
+  // If both start AND end are clearly in the past (>14 days ago), skip entirely
+  // — the caller filters these out before upsert.
+  const cutoff = toDateKey(new Date(today.getTime() - 14 * DAY));
+  if (end < cutoff) return null; // signal: skip this row
 
   const tags = Array.from(new Set([...p.tags, "ingested"]));
 
@@ -55,7 +61,7 @@ export async function upsertPromotions(
 ): Promise<UpsertResult> {
   if (promotions.length === 0) return { attempted: 0, saved: 0 };
 
-  const rows = promotions.map(toRow);
+  const rows = promotions.map(toRow).filter((r): r is NonNullable<typeof r> => r !== null);
   const { data, error } = await supabase
     .from("promotions")
     .upsert(rows, { onConflict: "dedupe_key", ignoreDuplicates: false })

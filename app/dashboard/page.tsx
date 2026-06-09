@@ -12,6 +12,7 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { CATEGORIES } from "@/lib/constants";
 import { FOOD_SPOTS, CUISINE_META } from "@/lib/food/spots";
+import { HIDDEN_GEMS, GEM_CATEGORY_META } from "@/lib/gems/gems";
 import type { Promotion } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -186,6 +187,49 @@ export default async function DashboardPage() {
                 <span className="text-[10px] font-medium text-muted-foreground">{meta.label}</span>
               </Link>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden Gems teaser */}
+      <div className="animate-fade-in-up animation-delay-200">
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <div className="flex items-center justify-between px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-lg">💎</span>
+              <div>
+                <h2 className="text-sm font-semibold">Hidden Gems</h2>
+                <p className="text-xs text-muted-foreground">{HIDDEN_GEMS.length} underrated spots · explore SG</p>
+              </div>
+            </div>
+            <Link
+              href="/gems"
+              className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+            >
+              Explore <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {/* Category emoji strip */}
+          <div className="no-scrollbar flex gap-3 overflow-x-auto px-5 py-4">
+            {(Object.entries(GEM_CATEGORY_META) as [string, typeof GEM_CATEGORY_META[keyof typeof GEM_CATEGORY_META]][]).map(([key, meta]) => (
+              <Link
+                key={key}
+                href={`/gems?category=${key}`}
+                className="flex shrink-0 flex-col items-center gap-1"
+              >
+                <span className={`flex h-12 w-12 items-center justify-center rounded-2xl text-2xl ${meta.bg}`}>
+                  {meta.emoji}
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground">{meta.label}</span>
+              </Link>
+            ))}
+            <Link
+              href="/map"
+              className="flex shrink-0 flex-col items-center gap-1"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-2xl">🗺️</span>
+              <span className="text-[10px] font-medium text-muted-foreground">Map</span>
+            </Link>
           </div>
         </div>
       </div>
