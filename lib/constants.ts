@@ -12,12 +12,19 @@ export interface CategoryMeta {
   /** Tailwind classes for the small dot indicator. */
   dotClass: string;
   emoji: string;
+  /** Fallback cover image shown when a promotion has no imageUrl. */
+  fallbackImage: string;
 }
 
 /**
  * Single source of truth for category presentation. Used by calendar chips,
  * badges, legends and filters so colors stay consistent everywhere.
  */
+// Stable Unsplash photo IDs used as category fallback covers.
+// Format: images.unsplash.com/photo-{ID}?w=600&h=400&fit=crop&auto=format&q=75
+const UNS = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=600&h=400&fit=crop&auto=format&q=75`;
+
 export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
   food_beverage: {
     value: "food_beverage",
@@ -28,6 +35,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200",
     dotClass: "bg-orange-500",
     emoji: "🍜",
+    fallbackImage: UNS("1504674900247-0877df9cc836"),
   },
   shopping: {
     value: "shopping",
@@ -38,6 +46,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-pink-100 text-pink-800 dark:bg-pink-500/20 dark:text-pink-200",
     dotClass: "bg-pink-500",
     emoji: "🛍️",
+    fallbackImage: UNS("1483985988355-763728e1935b"),
   },
   attractions: {
     value: "attractions",
@@ -48,6 +57,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
     dotClass: "bg-emerald-500",
     emoji: "🎡",
+    fallbackImage: UNS("1512917647-6291fecb1849"),
   },
   events: {
     value: "events",
@@ -58,6 +68,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
     dotClass: "bg-violet-500",
     emoji: "🎪",
+    fallbackImage: UNS("1540575467063-178a50c2df87"),
   },
   travel: {
     value: "travel",
@@ -68,6 +79,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200",
     dotClass: "bg-sky-500",
     emoji: "✈️",
+    fallbackImage: UNS("1436491865332-7a61a109cc05"),
   },
   credit_card: {
     value: "credit_card",
@@ -78,6 +90,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200",
     dotClass: "bg-indigo-500",
     emoji: "💳",
+    fallbackImage: UNS("1556742049-0cfed4f6a45d"),
   },
   entertainment: {
     value: "entertainment",
@@ -88,6 +101,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200",
     dotClass: "bg-rose-500",
     emoji: "🎬",
+    fallbackImage: UNS("1489599849927-2ee91cede3ba"),
   },
   lifestyle: {
     value: "lifestyle",
@@ -98,6 +112,7 @@ export const CATEGORY_META: Record<PromoCategory, CategoryMeta> = {
       "bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200",
     dotClass: "bg-teal-500",
     emoji: "🌿",
+    fallbackImage: UNS("1571019613454-1cb2f99b2d8b"),
   },
 };
 

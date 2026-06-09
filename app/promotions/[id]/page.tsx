@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getPromotionById } from "@/lib/promotions/queries";
 import { formatDateRange, endingInLabel } from "@/lib/format";
+import { getCategoryMeta } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -48,14 +49,19 @@ export default async function PromotionPage({
         <ChevronLeft className="h-4 w-4" /> Back
       </Link>
 
-      {promo.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={promo.imageUrl}
+          src={promo.imageUrl ?? getCategoryMeta(promo.category).fallbackImage}
           alt=""
-          className="aspect-video w-full rounded-2xl object-cover"
+          className="h-full w-full object-cover"
         />
-      )}
+        {!promo.imageUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25 text-6xl">
+            {getCategoryMeta(promo.category).emoji}
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <CategoryBadge category={promo.category} />

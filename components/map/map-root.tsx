@@ -248,22 +248,20 @@ export function MapRoot({
               <X className="h-4 w-4" />
             </button>
             <Link href={`/promotions/${selected.id}`} className="flex gap-3 p-3">
-              {selected.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={selected.imageUrl}
+                  src={selected.imageUrl ?? getCategoryMeta(selected.category).fallbackImage}
                   alt=""
-                  className="h-20 w-20 shrink-0 rounded-xl object-cover"
+                  className="h-full w-full object-cover"
                   loading="lazy"
                 />
-              ) : (
-                <div className={cn(
-                  "flex h-20 w-20 shrink-0 items-center justify-center rounded-xl text-3xl",
-                  getCategoryMeta(selected.category).chipClass,
-                )}>
-                  {getCategoryMeta(selected.category).emoji}
-                </div>
-              )}
+                {!selected.imageUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-2xl">
+                    {getCategoryMeta(selected.category).emoji}
+                  </div>
+                )}
+              </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-1.5">
                   <CategoryBadge category={selected.category} />

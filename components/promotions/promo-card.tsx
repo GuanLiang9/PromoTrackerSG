@@ -24,20 +24,17 @@ export function PromoCard({
       <Link href={`/promotions/${promotion.id}`} className="flex flex-1 flex-col">
         {!compact && (
           <div className="relative h-36 shrink-0 overflow-hidden">
-            {promotion.imageUrl ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={promotion.imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-              </>
-            ) : (
-              <div className={cn("flex h-full w-full items-center justify-center", meta.chipClass)}>
-                <span className="select-none text-5xl opacity-50">{meta.emoji}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={promotion.imageUrl ?? meta.fallbackImage}
+              alt=""
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            {!promotion.imageUrl && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-4xl drop-shadow-lg">{meta.emoji}</span>
               </div>
             )}
           </div>
