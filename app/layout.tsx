@@ -60,7 +60,7 @@ export default function RootLayout({
         >
           <ThemeColorMeta />
           <TopBar />
-          <main className="container max-w-5xl pb-[calc(6rem_+_max(env(safe-area-inset-bottom),0.5rem))] pt-4 md:pb-10">
+          <main className="container max-w-5xl pb-[calc(6rem_+_max(env(safe-area-inset-bottom),0.25rem))] pt-4 md:pb-10">
             {children}
           </main>
           <BottomNav />
