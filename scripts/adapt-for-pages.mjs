@@ -38,7 +38,6 @@ const routes = {
     "/_next/static/*",
     "/icons/*",
     "/sw.js",
-    "/manifest.webmanifest",
     "/BUILD_ID",
   ],
 };
