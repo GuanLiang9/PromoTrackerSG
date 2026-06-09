@@ -4,6 +4,7 @@ import type {
   RawItem,
   SourceAdapter,
 } from "@/lib/ingestion/types";
+import { isExpiredByText } from "@/lib/ingestion/parse-validity";
 
 export interface NormalizedPromotion extends ExtractedPromotion {
   externalId: string;
@@ -56,6 +57,7 @@ export class IngestionPipeline {
     const seen = new Set<string>();
     const out: NormalizedPromotion[] = [];
     const maxItems = this.options.maxItems ?? Infinity;
+    const today = new Date().toISOString().slice(0, 10);
 
     for (const adapter of this.adapters) {
       if (out.length >= maxItems) break;
@@ -74,6 +76,9 @@ export class IngestionPipeline {
         if (skipExternalIds.has(item.externalId)) continue;
         const extracted = await this.safeExtract(item);
         if (!extracted) continue;
+        // Central guard: drop posts already past their stated validity,
+        // regardless of which extractor (regex / LLM) produced them.
+        if (isExpiredByText(item.text, today)) continue;
 
         const dedupeKey = makeDedupeKey(item.sourceName, extracted.title);
         if (seen.has(dedupeKey)) continue;

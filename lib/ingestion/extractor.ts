@@ -5,6 +5,7 @@ import type {
 } from "@/lib/ingestion/types";
 import type { PromoCategory } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/constants";
+import { parseValidity, isExpiredByText } from "@/lib/ingestion/parse-validity";
 
 const CATEGORY_KEYWORDS: Record<PromoCategory, string[]> = {
   food_beverage: ["food", "dining", "restaurant", "cafe", "buffet", "drink", "1-for-1", "bistro"],
@@ -16,18 +17,6 @@ const CATEGORY_KEYWORDS: Record<PromoCategory, string[]> = {
   entertainment: ["movie", "cinema", "gv", "cathay", "show", "theatre", "gaming"],
   lifestyle: ["spa", "wellness", "beauty", "fitness", "gym", "salon", "lifestyle"],
 };
-
-/** Naive ISO date finder (YYYY-MM-DD or DD/MM/YYYY). */
-function findDates(text: string): string[] {
-  const iso = text.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
-  const dmy = (text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g) ?? []).map(
-    (d) => {
-      const [day, month, year] = d.split("/");
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    },
-  );
-  return [...iso, ...dmy];
-}
 
 function guessCategory(text: string): PromoCategory {
   const lower = text.toLowerCase();
@@ -76,9 +65,18 @@ export class RegexExtractor implements PromotionExtractor {
     // Telegram service messages / channel housekeeping — not promotions.
     if (/^channel (created|photo|name|pinned)/i.test(text)) return null;
 
+    // Drop posts whose validity is already past (e.g. "Till 30 April 2024").
+    const today = new Date().toISOString().slice(0, 10);
+    if (isExpiredByText(text, today)) return null;
+
     const firstLine = text.split("\n").find((l) => l.trim().length > 0) ?? text;
-    const dates = findDates(text);
     const category = guessCategory(text);
+    // Parse real validity dates from the natural-language text. The cue-anchored
+    // deadline ("till/until/by <date>") is the binding end date when present;
+    // otherwise use the furthest date found. Undated posts leave these null so
+    // upsert applies its default window.
+    const { start, end, cueEnd } = parseValidity(text, new Date().getFullYear());
+    const effectiveEnd = cueEnd ?? end;
 
     const title = sanitizeTitle(firstLine).slice(0, 140);
     if (title.length < 8) return null;
@@ -87,8 +85,8 @@ export class RegexExtractor implements PromotionExtractor {
       title,
       description: text.slice(0, 1000),
       category,
-      startDate: dates[0] ?? null,
-      endDate: dates[1] ?? dates[0] ?? null,
+      startDate: start,
+      endDate: effectiveEnd ?? start,
       location: null,
       tags: extractTags(text),
     };

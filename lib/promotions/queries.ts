@@ -114,13 +114,19 @@ export async function getDashboardSections(): Promise<DashboardSections> {
 
   const [todayRes, newRes, endingRes, trendingRes] = await Promise.all([
     base().lte("start_date", today).gte("end_date", today).limit(20),
-    base().gte("created_at", last7Days).order("created_at", { ascending: false }).limit(12),
+    // New arrivals + Trending must still be live: floor on end_date so a promo
+    // that has already ended never surfaces even before the daily archive runs.
+    base()
+      .gte("created_at", last7Days)
+      .gte("end_date", today)
+      .order("created_at", { ascending: false })
+      .limit(12),
     base()
       .gte("end_date", today)
       .lte("end_date", in3Days)
       .order("end_date", { ascending: true })
       .limit(12),
-    base().order("created_at", { ascending: false }).limit(12),
+    base().gte("end_date", today).order("created_at", { ascending: false }).limit(12),
   ]);
 
   const map = (rows: PromotionRow[] | null) =>
@@ -178,6 +184,7 @@ export async function searchPromotions(
       const last7Days = toDateKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
       q = q
         .gte("created_at", last7Days)
+        .gte("end_date", today)
         .order("created_at", { ascending: false });
       break;
     }
@@ -190,10 +197,10 @@ export async function searchPromotions(
       break;
     }
     case "trending":
-      q = q.order("created_at", { ascending: false });
+      q = q.gte("end_date", today).order("created_at", { ascending: false });
       break;
     default:
-      q = q.order("start_date", { ascending: true });
+      q = q.gte("end_date", today).order("start_date", { ascending: true });
   }
 
   const { data, error } = await q.limit(100);
