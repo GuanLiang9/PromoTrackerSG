@@ -62,7 +62,7 @@ export default async function DashboardPage() {
               Live in Singapore
             </div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              What's on today 🇸🇬
+              What&apos;s on today 🇸🇬
             </h1>
             <p className="max-w-sm text-sm text-muted-foreground">
               Deals, events and discounts across Singapore — all in one place.

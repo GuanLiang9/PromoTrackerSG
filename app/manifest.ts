@@ -10,7 +10,6 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    // @ts-expect-error — display_override not yet in Next.js types but is valid
     display_override: ["standalone", "minimal-ui"],
     background_color: "#0b0d14",
     theme_color: "#0b0d14",
