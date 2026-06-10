@@ -19,14 +19,18 @@ export const dynamic = "force-dynamic";
 
 function Section({
   title,
+  emoji,
   promotions,
   href,
   delay = 0,
+  accent,
 }: {
   title: string;
+  emoji: string;
   promotions: Promotion[];
   href?: string;
   delay?: number;
+  accent?: string;
 }) {
   return (
     <section
@@ -34,11 +38,21 @@ function Section({
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-base ${accent ?? "bg-muted"}`}
+          >
+            {emoji}
+          </span>
+          <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {promotions.length}
+          </span>
+        </div>
         {href && (
           <Link
             href={href}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-xs font-medium text-brand transition-colors hover:text-brand/80"
           >
             See all <ArrowRight className="h-3 w-3" />
           </Link>
@@ -192,11 +206,11 @@ export default async function DashboardPage() {
 
       {!isSupabaseConfigured && <SetupNotice />}
 
-      <Section title="Today's promotions" promotions={sections.today} href="/search?sort=today" delay={150} />
-      <Section title="New arrivals" promotions={sections.newest} href="/search?sort=newest" delay={200} />
-      <Section title="Ending soon" promotions={sections.endingSoon} href="/search?sort=ending" delay={250} />
-      <Section title="Trending" promotions={sections.trending} href="/search?sort=trending" delay={300} />
-      <Section title="Saved" promotions={sections.saved} href="/saved" delay={350} />
+      <Section title="Today's promotions" emoji="📅" accent="bg-brand/10 text-brand" promotions={sections.today} href="/search?sort=today" delay={150} />
+      <Section title="New arrivals" emoji="✨" accent="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300" promotions={sections.newest} href="/search?sort=newest" delay={200} />
+      <Section title="Ending soon" emoji="⏳" accent="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300" promotions={sections.endingSoon} href="/search?sort=ending" delay={250} />
+      <Section title="Trending now" emoji="🔥" accent="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300" promotions={sections.trending} href="/search?sort=trending" delay={300} />
+      <Section title="Saved" emoji="🔖" accent="bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300" promotions={sections.saved} href="/saved" delay={350} />
     </div>
   );
 }

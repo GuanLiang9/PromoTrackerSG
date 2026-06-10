@@ -117,6 +117,12 @@ export class RssAdapter implements SourceAdapter {
       const text = htmlToText(`${title}\n\n${desc}`);
       if (text.length < 15) continue;
 
+      // Skip posts older than 30 days (RSS feeds may include months of archives).
+      if (date) {
+        const ageMs = Date.now() - new Date(date).getTime();
+        if (ageMs > 30 * 24 * 60 * 60 * 1000) continue;
+      }
+
       items.push({
         externalId: `rss:${link || title}`,
         sourceName: this.name,
