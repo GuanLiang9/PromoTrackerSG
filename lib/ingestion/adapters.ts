@@ -69,13 +69,21 @@ export class TelegramAdapter implements SourceAdapter {
       );
       const time = chunk.match(/datetime="([^"]+)"/);
 
+      const publishedAt = time ? time[1] : undefined;
+      // Skip posts older than 14 days — Telegram previews include historical
+      // messages and old posts create stale promos with fake future end_dates.
+      if (publishedAt) {
+        const ageMs = Date.now() - new Date(publishedAt).getTime();
+        if (ageMs > 14 * 24 * 60 * 60 * 1000) continue;
+      }
+
       items.push({
         externalId: `telegram:${externalId}`,
         sourceName: this.name,
         sourceUrl: `https://t.me/${externalId}`,
         text,
         imageUrl: photo ? photo[1] : undefined,
-        publishedAt: time ? time[1] : undefined,
+        publishedAt,
       });
     }
     // Telegram preview is oldest→newest; keep the most recent messages.

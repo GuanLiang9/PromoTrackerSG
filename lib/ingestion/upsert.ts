@@ -9,13 +9,13 @@ function toDateKey(d: Date): string {
 
 /**
  * Maps a normalized promotion to a `promotions` row. Promotions without explicit
- * dates default to a 30-day window starting today so they stay visible on the
- * calendar; end_date is always clamped to be >= start_date.
+ * dates default to a 7-day window (down from 30) so undated posts expire quickly
+ * instead of surfacing stale deals for a month.
  */
 export function toRow(p: NormalizedPromotion) {
   const today = new Date();
   const start = p.startDate ?? toDateKey(today);
-  let end = p.endDate ?? toDateKey(new Date(today.getTime() + 30 * DAY));
+  let end = p.endDate ?? toDateKey(new Date(today.getTime() + 7 * DAY));
   if (end < start) end = start;
 
   const tags = Array.from(new Set([...p.tags, "ingested"]));
