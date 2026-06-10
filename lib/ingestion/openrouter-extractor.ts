@@ -5,10 +5,16 @@ import type {
 } from "@/lib/ingestion/types";
 import type { PromoCategory } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/constants";
-import { RegexExtractor, sanitizeTitle } from "@/lib/ingestion/extractor";
+import { RegexExtractor, sanitizeTitle, classifyContentType } from "@/lib/ingestion/extractor";
+import type { ContentType } from "@/lib/ingestion/types";
 
 const CATEGORIES = Object.keys(CATEGORY_META) as PromoCategory[];
+const CONTENT_TYPES: ContentType[] = ["promotion", "food_spot", "event", "news"];
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+function isContentType(v: unknown): v is ContentType {
+  return typeof v === "string" && (CONTENT_TYPES as string[]).includes(v);
+}
 
 function isCategory(v: unknown): v is PromoCategory {
   return typeof v === "string" && (CATEGORIES as string[]).includes(v);
@@ -22,6 +28,7 @@ function isoOrNull(v: unknown): string | null {
 
 interface LlmResult {
   isPromotion?: boolean;
+  contentType?: string;
   title?: string;
   description?: string;
   category?: string;
@@ -81,6 +88,9 @@ export class OpenRouterExtractor implements PromotionExtractor {
         title: title.slice(0, 140),
         description: (result.description ?? text).slice(0, 1000).trim(),
         category: isCategory(result.category) ? result.category : "lifestyle",
+        contentType: isContentType(result.contentType)
+          ? result.contentType
+          : classifyContentType(title),
         startDate: isoOrNull(result.startDate),
         endDate: isoOrNull(result.endDate),
         location: result.location?.trim() || null,
@@ -100,16 +110,22 @@ export class OpenRouterExtractor implements PromotionExtractor {
   private async callModel(text: string): Promise<LlmResult | null> {
     const today = new Date().toISOString().slice(0, 10);
     const system =
-      "You extract structured Singapore promotion/deal data from raw social posts. " +
+      "You extract structured Singapore listings from raw social/blog posts. " +
       "Return ONLY a JSON object, no prose. " +
       `Today is ${today}. Resolve relative dates against it; assume the current ` +
       "year if a year is omitted. Dates must be YYYY-MM-DD or null. " +
       `category must be one of: ${CATEGORIES.join(", ")}. ` +
-      "If the post is NOT a real consumer promotion/deal/event (e.g. it is a job " +
-      "ad, channel advertisement, or spam), set isPromotion to false.";
+      "Classify contentType as exactly one of:\n" +
+      "- 'promotion': a real consumer deal/offer with savings (1-for-1, % off, free gift, sale, cashback, voucher, special price).\n" +
+      "- 'food_spot': a recommendation of a specific place to eat (a restaurant/hawker/café feature) with NO specific deal.\n" +
+      "- 'event': a festival, market, pop-up, fair, expo or concert happening on given dates.\n" +
+      "- 'news': editorial — a shop/restaurant OPENING or LAUNCH announcement, a review, a guide, a roundup ('10 best…'), or a closure, with NO deal.\n" +
+      "A new-shop opening is 'news', NOT a promotion. A place recommendation without a discount is 'food_spot', NOT a promotion. " +
+      "If the post is a job ad, channel advertisement or spam, set isPromotion to false.";
 
     const schema =
-      '{"isPromotion": boolean, "title": string (concise, <=140 chars), ' +
+      '{"isPromotion": boolean, "contentType": "promotion"|"food_spot"|"event"|"news", ' +
+      '"title": string (concise, <=140 chars), ' +
       '"description": string, "category": string, "startDate": string|null, ' +
       '"endDate": string|null, "location": string|null, "tags": string[] }';
 

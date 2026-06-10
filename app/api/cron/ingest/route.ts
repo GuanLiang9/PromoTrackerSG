@@ -3,8 +3,16 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { IngestionPipeline } from "@/lib/ingestion/pipeline";
 import { buildAdapters } from "@/lib/ingestion/sources";
 import { OpenRouterExtractor } from "@/lib/ingestion/openrouter-extractor";
+import { classifyContentType } from "@/lib/ingestion/extractor";
 import { upsertPromotions } from "@/lib/ingestion/upsert";
 import { geocodeFromDictionary, geocodeLocation } from "@/lib/ingestion/geocode";
+
+// Blog / review channels post mostly editorial (reviews, features, roundups);
+// bias them toward 'news' unless their title carries a real deal.
+const EDITORIAL_SOURCES = new Set([
+  "Daniel Food Diary", "Eatbook", "Eatbook SG", "Seth Lui", "Miss Tam Chiak",
+  "SG Food Lover", "SG Foodies", "The Honeycombers SG", "The Smart Local",
+]);
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -66,6 +74,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "pipeline failed" },
       { status: 500 },
+    );
+  }
+
+  // Deterministic content-type guardrail: classify on the (clean) title plus
+  // the source's editorial nature, trusting the LLM only for 'food_spot'. This
+  // keeps deals, news, events and food recommendations from crossing over even
+  // when the free model errs or falls back to regex.
+  for (const p of normalized) {
+    p.contentType = classifyContentType(
+      p.title,
+      EDITORIAL_SOURCES.has(p.sourceName),
+      p.contentType,
     );
   }
 

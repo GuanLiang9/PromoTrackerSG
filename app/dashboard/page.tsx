@@ -8,6 +8,7 @@ import {
   getDashboardSections,
   getRecommendations,
   getDailySummary,
+  getEvents,
 } from "@/lib/promotions/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { CATEGORIES } from "@/lib/constants";
@@ -64,10 +65,11 @@ function Section({
 }
 
 export default async function DashboardPage() {
-  const [sections, recs, summary] = await Promise.all([
+  const [sections, recs, summary, events] = await Promise.all([
     getDashboardSections(),
     getRecommendations(),
     getDailySummary(),
+    getEvents(12),
   ]);
 
   const summaryItems = summary
@@ -210,7 +212,8 @@ export default async function DashboardPage() {
       <Section title="New arrivals" emoji="✨" accent="bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300" promotions={sections.newest} href="/search?sort=newest" delay={200} />
       <Section title="Ending soon" emoji="⏳" accent="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300" promotions={sections.endingSoon} href="/search?sort=ending" delay={250} />
       <Section title="Trending now" emoji="🔥" accent="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300" promotions={sections.trending} href="/search?sort=trending" delay={300} />
-      <Section title="Saved" emoji="🔖" accent="bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300" promotions={sections.saved} href="/saved" delay={350} />
+      <Section title="Events & happenings" emoji="🎪" accent="bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300" promotions={events} href="/timeline" delay={350} />
+      <Section title="Saved" emoji="🔖" accent="bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300" promotions={sections.saved} href="/saved" delay={400} />
     </div>
   );
 }

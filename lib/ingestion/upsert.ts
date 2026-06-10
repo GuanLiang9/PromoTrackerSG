@@ -34,6 +34,7 @@ export function toRow(p: NormalizedPromotion) {
     source_url: p.sourceUrl,
     tags,
     status: "active" as const,
+    content_type: p.contentType ?? "promotion",
     dedupe_key: p.dedupeKey,
     external_id: p.externalId,
   };

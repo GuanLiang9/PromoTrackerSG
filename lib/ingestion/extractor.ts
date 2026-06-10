@@ -1,4 +1,5 @@
 import type {
+  ContentType,
   ExtractedPromotion,
   PromotionExtractor,
   RawItem,
@@ -53,6 +54,34 @@ function extractTags(text: string): string[] {
   return Array.from(new Set(hashtags)).slice(0, 8);
 }
 
+const DEAL_RE =
+  /(\d+\s*-?\s*for\s*-?\s*\d+|1-?for-?1|\d+\s*%\s*off|%\s*off|\bfree\b|giving away|\bsale\b|discount|voucher|cashback|rebate|\bdeal\b|\bpromo\b|save\s+\$|bundle|clearance|special\s+price|\$\d+\s*(?:nett|only|deal)?)/i;
+const EVENT_RE =
+  /\b(festival|fiesta|carnival|bazaar|pop-?up|pasar malam|night market|expo|funfair|countdown|parade|street fair|fringe)\b/i;
+const NEWS_RE =
+  /\b(opens?|opening|now open|reopens?|launch(?:es|ed|ing)?|unveil(?:s|ed)?|introduc(?:e|es|ed|ing)|debuts?|closing|closes?|shuts? down|review|guide|directory|itinerary|michelin|recommendation|where to|how to)\b|\b\d+\s+(?:best|fresh|new|top|must)\b|\btop\s+\d+\b/i;
+
+/**
+ * Classify a title into a content type. Best run on the TITLE (not the body),
+ * which is far less noisy. Deals win over everything (an opening WITH a deal is
+ * still a deal); then events; then editorial/news. `editorialSource` biases
+ * blog/review channels toward news. `aiHint` (the LLM's guess) is only trusted
+ * for 'food_spot' — a genuine place recommendation — when no deal/news signal
+ * is present, since regex alone can't recognise a recommendation.
+ */
+export function classifyContentType(
+  title: string,
+  editorialSource = false,
+  aiHint?: ContentType,
+): ContentType {
+  if (DEAL_RE.test(title)) return "promotion";
+  if (EVENT_RE.test(title)) return "event";
+  if (NEWS_RE.test(title)) return "news";
+  if (aiHint === "food_spot") return "food_spot";
+  if (editorialSource) return "news";
+  return aiHint && aiHint !== "promotion" ? aiHint : "promotion";
+}
+
 /** Strip URLs and tidy whitespace/markdown/trailing punctuation from a title. */
 export function sanitizeTitle(raw: string): string {
   return raw
@@ -87,6 +116,7 @@ export class RegexExtractor implements PromotionExtractor {
       title,
       description: text.slice(0, 1000),
       category,
+      contentType: classifyContentType(title),
       startDate: dates[0] ?? null,
       endDate: dates[1] ?? dates[0] ?? null,
       location: null,
