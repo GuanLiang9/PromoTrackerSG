@@ -60,6 +60,7 @@ export async function getPromotionsWithCoords(): Promise<Promotion[]> {
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .gte("end_date", toDateKey(new Date()))
     .not("latitude", "is", null)
     .not("longitude", "is", null)
     .limit(500);
@@ -79,6 +80,8 @@ export async function getPromotionById(
     .from("promotions")
     .select(SELECT)
     .eq("id", id)
+    .eq("status", "active")
+    .gte("end_date", toDateKey(new Date()))
     .maybeSingle();
 
   if (error) throw error;
@@ -109,8 +112,10 @@ export async function getDashboardSections(): Promise<DashboardSections> {
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   );
 
+  // Belt-and-suspenders: filter by end_date in the query so expired promos
+  // never surface even in the window between cron runs.
   const base = () =>
-    supabase.from("promotions").select(SELECT).eq("status", "active");
+    supabase.from("promotions").select(SELECT).eq("status", "active").gte("end_date", today);
 
   const [todayRes, newRes, endingRes, trendingRes] = await Promise.all([
     base().lte("start_date", today).gte("end_date", today).limit(20),
@@ -149,7 +154,14 @@ export async function searchPromotions(
   const supabase = await createClient();
   const savedIds = await getSavedIds();
 
-  let q = supabase.from("promotions").select(SELECT).eq("status", "active");
+  // Always enforce end_date >= today so expired promos are never returned,
+  // regardless of whether the daily cron has run yet.
+  const today = toDateKey(new Date());
+  let q = supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .gte("end_date", today);
 
   if (filters.query) {
     q = q.textSearch("search_vector", filters.query, {
@@ -166,7 +178,6 @@ export async function searchPromotions(
 
   // The `sort` value mirrors a dashboard section: it applies a date window
   // and ordering that match getDashboardSections() exactly.
-  const today = toDateKey(new Date());
   switch (filters.sort) {
     case "today":
       q = q
@@ -239,10 +250,12 @@ export async function getRecommendations(limit = 12): Promise<{
   }
 
   // Pull a generous pool of top-scored active deals, then re-rank locally.
+  const todayKey = toDateKey(new Date());
   const { data, error } = await supabase
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .gte("end_date", todayKey)
     .order("base_score", { ascending: false, nullsFirst: false })
     .limit(60);
   if (error) throw error;
@@ -319,10 +332,13 @@ export async function getSavedPromotions(): Promise<Promotion[]> {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const todaySaved = toDateKey(new Date());
   const { data, error } = await supabase
     .from("saved_promotions")
     .select("promotion:promotions(*)")
     .eq("user_id", user.id)
+    .eq("promotion.status", "active")
+    .gte("promotion.end_date", todaySaved)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
