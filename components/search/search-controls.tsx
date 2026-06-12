@@ -19,11 +19,16 @@ import { serializeFilters } from "@/lib/promotions/search-params";
 import { cn } from "@/lib/utils";
 import type { PromoCategory, PromotionFilters, PromotionSort } from "@/lib/types";
 
-const SORT_OPTIONS: { value: PromotionSort; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "newest", label: "New" },
-  { value: "ending", label: "Ending soon" },
-  { value: "trending", label: "Trending" },
+const SORT_OPTIONS: { value: PromotionSort; label: string; emoji: string }[] = [
+  { value: "today", label: "Today", emoji: "📅" },
+  { value: "newest", label: "New", emoji: "✨" },
+  { value: "ending", label: "Ending soon", emoji: "⏳" },
+  { value: "trending", label: "Trending", emoji: "🔥" },
+];
+
+const LOCATION_CHIPS = [
+  "Orchard", "Marina Bay", "Jurong", "Tampines",
+  "Bugis", "Sentosa", "Clementi", "Changi",
 ];
 
 export function SearchControls({
@@ -161,6 +166,23 @@ export function SearchControls({
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Orchard, Jurong"
               />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {LOCATION_CHIPS.map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setLocation(location === loc ? "" : loc)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      location === loc
+                        ? "border-brand bg-brand/10 text-brand"
+                        : "bg-background text-muted-foreground hover:bg-accent",
+                    )}
+                  >
+                    📍 {loc}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -172,6 +194,7 @@ export function SearchControls({
                   setFrom("");
                   setTo("");
                   setLocation("");
+                  setSort(undefined);
                 }}
               >
                 <X className="h-4 w-4" /> Clear
@@ -188,22 +211,19 @@ export function SearchControls({
     </div>
 
       <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4">
-        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-          Sort:
-        </span>
         {SORT_OPTIONS.map((s) => (
           <button
             key={s.value}
             type="button"
             onClick={() => selectSort(s.value)}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              "shrink-0 rounded-xl border px-3 py-2 text-xs font-semibold transition-all",
               sort === s.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-background text-muted-foreground hover:bg-accent",
+                ? "border-brand bg-brand text-white shadow-sm"
+                : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            {s.label}
+            {s.emoji} {s.label}
           </button>
         ))}
       </div>

@@ -33,7 +33,7 @@ export default async function InterestsPage() {
           Sign in to pick your interests and get personalized recommendations.
         </p>
         <Button asChild>
-          <Link href="/auth/login">Sign in</Link>
+          <Link href="/auth/login?next=/interests">Sign in / Create account</Link>
         </Button>
       </div>
     );

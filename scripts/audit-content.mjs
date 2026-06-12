@@ -1,50 +1,55 @@
-// Diagnostic: find active promos whose TEXT references past years or stale phrasing.
-// Run: node --env-file=.env.local scripts/audit-content.mjs
+// Audit current active promotions — identify news vs real deals vs editorial.
 import { Client } from "pg";
-
-const c = new Client({
-  connectionString: process.env.SUPABASE_DB_URL,
-  ssl: { rejectUnauthorized: false },
-});
+const c = new Client({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
 await c.connect();
 
-const { rows } = await c.query(
-  `select id, title, description, start_date::date sd, end_date::date ed, source_name, source_url
-   from public.promotions where status = 'active'
-   order by created_at asc`,
-);
+const { rows } = await c.query(`
+  select id, title, source_name, tags, start_date::text, end_date::text,
+    (end_date::date - start_date::date) as span_days
+  from public.promotions
+  where status = 'active'
+  order by source_name, title
+`);
 
-// Patterns that signal a stale/expired promo in the text.
-const pastYears = /\b(2019|2020|2021|2022|2023|2024|2025)\b/;
-// Month-year like "Dec 2024", "31 December 2024"
-const staleNeedles = [
-  pastYears,
+// Heuristic patterns that indicate editorial/news vs real deals
+const NEWS_PATTERNS = [
+  /\bopens?\b/i, /\bopening\b/i, /\bnow open\b/i, /\blaunche[sd]\b/i,
+  /\bunveil[sd]?\b/i, /\bintroduce[sd]?\b/i, /\bnew store\b/i,
+  /\barrives?\b/i, /\bbring[s]?\b.*\bto singapore\b/i,
+  /^🏷/, // Seth Lui review posts start with 🏷
+  /\breview\b/i, /\bbest\b.*\bin singapore\b/i,
+  /\bguide\b/i, /\bwhere to\b/i, /\bhow to\b/i,
+  /\bitinerary\b/i, /\bdo you need\b/i, /\bwhat.s happening\b/i,
+  /\binterior designer\b/i, /\btravel money\b/i,
 ];
 
-const flagged = [];
+const DEAL_PATTERNS = [
+  /\d+\s*(?:for|%-?)\s*\d/i, /\bfree\b/i, /\b\d+\s*%\s*off\b/i,
+  /\b1-?for-?1\b/i, /\bdiscount\b/i, /\bpromo\b/i, /\bsale\b/i,
+  /\bvoucher\b/i, /\bcashback\b/i, /\brebate\b/i, /\bdeal\b/i,
+  /\bsave\b/i, /\bhalf.?price\b/i, /\boff\b/i, /\bspecial\b.*\bprice\b/i,
+];
+
+const EDITORIAL_SOURCES = ['Seth Lui','Daniel Food Diary','SG Foodies','MoneySmart','The Smart Local','The Honeycombers SG','Eatbook','Miss Tam Chiak'];
+
+const news = [], deals = [], unsure = [];
 for (const r of rows) {
-  const text = `${r.title}\n${r.description ?? ""}`;
-  const hits = [];
-  const ym = text.match(pastYears);
-  if (ym) hits.push(`year:${ym[0]}`);
-  if (hits.length) flagged.push({ ...r, hits });
+  const isNewsy = NEWS_PATTERNS.some(p => p.test(r.title));
+  const isDeal = DEAL_PATTERNS.some(p => p.test(r.title));
+  const isEditorial = EDITORIAL_SOURCES.includes(r.source_name) && !isDeal;
+  if (isNewsy || isEditorial) news.push(r);
+  else if (isDeal) deals.push(r);
+  else unsure.push(r);
 }
 
-console.log(`Total active: ${rows.length}`);
-console.log(`Flagged (text references past year 2019–2025): ${flagged.length}\n`);
+console.log(`\nTotal active: ${rows.length}`);
+console.log(`\n== REAL DEALS (${deals.length}) ==`);
+deals.slice(0,20).forEach(r => console.log(`  [${r.source_name}] ${(r.title||'').slice(0,65)}`));
 
-for (const r of flagged) {
-  console.log(`[${r.hits.join(",")}] ${r.title?.slice(0, 70)}`);
-  console.log(`   ${r.sd}→${r.ed} | ${r.source_name}`);
-  const snippet = (r.description ?? "").replace(/\s+/g, " ").slice(0, 140);
-  if (snippet) console.log(`   "${snippet}"`);
-  console.log(`   id=${r.id}`);
-}
+console.log(`\n== NEWS/EDITORIAL (${news.length}) — should be archived ==`);
+news.forEach(r => console.log(`  [${r.source_name}] ${(r.title||'').slice(0,65)}`));
 
-// Also list ALL active titles so we can eyeball obviously-dated campaigns
-console.log("\n\n=== ALL ACTIVE TITLES ===");
-for (const r of rows) {
-  console.log(`- ${r.title?.slice(0, 80)}  [${r.source_name}] ${r.sd}→${r.ed}`);
-}
+console.log(`\n== UNSURE (${unsure.length}) ==`);
+unsure.forEach(r => console.log(`  [${r.source_name}] ${(r.title||'').slice(0,65)}`));
 
 await c.end();

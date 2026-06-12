@@ -3,8 +3,17 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { IngestionPipeline } from "@/lib/ingestion/pipeline";
 import { buildAdapters } from "@/lib/ingestion/sources";
 import { OpenRouterExtractor } from "@/lib/ingestion/openrouter-extractor";
+import { classifyContentType } from "@/lib/ingestion/extractor";
 import { upsertPromotions } from "@/lib/ingestion/upsert";
 import { geocodeFromDictionary, geocodeLocation } from "@/lib/ingestion/geocode";
+import { resolveImage } from "@/lib/ingestion/image-resolver";
+
+// Blog / review channels post mostly editorial (reviews, features, roundups);
+// bias them toward 'news' unless their title carries a real deal.
+const EDITORIAL_SOURCES = new Set([
+  "Daniel Food Diary", "Eatbook", "Eatbook SG", "Seth Lui", "Miss Tam Chiak",
+  "SG Food Lover", "SG Foodies", "The Honeycombers SG", "The Smart Local",
+]);
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -69,6 +78,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Deterministic content-type guardrail: classify on the (clean) title plus
+  // the source's editorial nature, trusting the LLM only for 'food_spot'. This
+  // keeps deals, news, events and food recommendations from crossing over even
+  // when the free model errs or falls back to regex.
+  for (const p of normalized) {
+    p.contentType = classifyContentType(
+      p.title,
+      EDITORIAL_SOURCES.has(p.sourceName),
+      p.contentType,
+    );
+  }
+
   // Geocode locations so promos can appear on the map. The dictionary is free
   // and unlimited; live Nominatim calls are capped per run to stay within the
   // Workers subrequest budget (the rest can be filled by the backfill script).
@@ -92,6 +113,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Give every imageless promo a relevant stock photo (free, deterministic) so
+  // no card renders as a bare placeholder.
+  let imaged = 0;
+  for (const p of normalized) {
+    if (!p.imageUrl) {
+      p.imageUrl = resolveImage(p.title, p.description, p.category);
+      imaged++;
+    }
+  }
+
   const result = await upsertPromotions(supabase, normalized);
 
   await supabase.from("ingestion_logs").insert({
@@ -106,6 +137,7 @@ export async function POST(request: NextRequest) {
     ai_enabled: extractor.isConfigured,
     found: normalized.length,
     geocoded,
+    imaged,
     ...result,
     ran_at: new Date().toISOString(),
   });

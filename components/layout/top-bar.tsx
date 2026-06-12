@@ -1,17 +1,24 @@
 import Link from "next/link";
 import { NavLinks } from "@/components/layout/nav-links";
-import { APP_NAME } from "@/lib/constants";
+import { AccountMenu } from "@/components/layout/account-menu";
 
 export function TopBar() {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 backdrop-blur-xl">
       <div className="container flex h-14 max-w-5xl items-center justify-between gap-4">
-        <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-          <span className="text-xl">🇸🇬</span>
-          <span className="text-lg font-bold tracking-tight">{APP_NAME}</span>
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-sm text-brand-foreground shadow-sm">
+            🇸🇬
+          </span>
+          <span className="text-lg font-bold tracking-tight">
+            Promo<span className="text-brand">SG</span>
+          </span>
         </Link>
 
-        <NavLinks />
+        <div className="flex items-center gap-2">
+          <NavLinks />
+          <AccountMenu />
+        </div>
       </div>
     </header>
   );

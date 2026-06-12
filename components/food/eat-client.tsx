@@ -60,7 +60,7 @@ export function EatClient({
               Where to Eat in Singapore
             </h1>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Hawker classics, restaurant hidden gems, cafés and live food deals — all in one place.
+              Hawker classics, restaurant hidden gems and café recommendations — all in one place.
             </p>
           </div>
         </div>
@@ -126,12 +126,12 @@ export function EatClient({
         </div>
       </div>
 
-      {/* Live food deals from DB */}
+      {/* Featured food recommendations from DB */}
       {foodDeals.length > 0 && !cuisine && !price && (
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-brand" />
-            <h2 className="text-base font-semibold tracking-tight">Live food deals</h2>
+            <h2 className="text-base font-semibold tracking-tight">Featured spots</h2>
             <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
               {foodDeals.length}
             </span>

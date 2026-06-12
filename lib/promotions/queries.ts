@@ -42,6 +42,7 @@ export async function getPromotionsInRange(
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .in("content_type", ["promotion", "event"])
     .lte("start_date", toDateKey(to))
     .gte("end_date", toDateKey(from))
     .order("start_date", { ascending: true });
@@ -50,7 +51,7 @@ export async function getPromotionsInRange(
   return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
 }
 
-/** Active promotions that have coordinates, for the map view. */
+/** Active promotions + food spots + events with coordinates, for the map. */
 export async function getPromotionsWithCoords(): Promise<Promotion[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
@@ -60,9 +61,49 @@ export async function getPromotionsWithCoords(): Promise<Promotion[]> {
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .neq("content_type", "news") // map shows places/deals/events, not news
+    .gte("end_date", toDateKey(new Date()))
     .not("latitude", "is", null)
     .not("longitude", "is", null)
     .limit(500);
+
+  if (error) throw error;
+  return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+}
+
+/** Curated food recommendations (places to eat), for the /eat page. */
+export async function getFoodSpots(limit = 60): Promise<Promotion[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const savedIds = await getSavedIds();
+
+  const { data, error } = await supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .eq("content_type", "food_spot")
+    .order("base_score", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
+}
+
+/** Active events / happenings (festivals, markets, pop-ups), date-ordered. */
+export async function getEvents(limit = 20): Promise<Promotion[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const savedIds = await getSavedIds();
+  const today = toDateKey(new Date());
+
+  const { data, error } = await supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .eq("content_type", "event")
+    .gte("end_date", today)
+    .order("start_date", { ascending: true })
+    .limit(limit);
 
   if (error) throw error;
   return (data as PromotionRow[]).map((r) => mapRowToPromotion(r, savedIds));
@@ -79,6 +120,8 @@ export async function getPromotionById(
     .from("promotions")
     .select(SELECT)
     .eq("id", id)
+    .eq("status", "active")
+    .gte("end_date", toDateKey(new Date()))
     .maybeSingle();
 
   if (error) throw error;
@@ -109,8 +152,16 @@ export async function getDashboardSections(): Promise<DashboardSections> {
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   );
 
+  // Belt-and-suspenders: filter by end_date in the query so expired promos
+  // never surface even in the window between cron runs. content_type='promotion'
+  // keeps food recommendations, news and events out of the deal sections.
   const base = () =>
-    supabase.from("promotions").select(SELECT).eq("status", "active");
+    supabase
+      .from("promotions")
+      .select(SELECT)
+      .eq("status", "active")
+      .eq("content_type", "promotion")
+      .gte("end_date", today);
 
   const [todayRes, newRes, endingRes, trendingRes] = await Promise.all([
     base().lte("start_date", today).gte("end_date", today).limit(20),
@@ -155,7 +206,15 @@ export async function searchPromotions(
   const supabase = await createClient();
   const savedIds = await getSavedIds();
 
-  let q = supabase.from("promotions").select(SELECT).eq("status", "active");
+  // Always enforce end_date >= today so expired promos are never returned,
+  // regardless of whether the daily cron has run yet.
+  const today = toDateKey(new Date());
+  let q = supabase
+    .from("promotions")
+    .select(SELECT)
+    .eq("status", "active")
+    .eq("content_type", "promotion")
+    .gte("end_date", today);
 
   if (filters.query) {
     q = q.textSearch("search_vector", filters.query, {
@@ -172,7 +231,6 @@ export async function searchPromotions(
 
   // The `sort` value mirrors a dashboard section: it applies a date window
   // and ordering that match getDashboardSections() exactly.
-  const today = toDateKey(new Date());
   switch (filters.sort) {
     case "today":
       q = q
@@ -246,10 +304,13 @@ export async function getRecommendations(limit = 12): Promise<{
   }
 
   // Pull a generous pool of top-scored active deals, then re-rank locally.
+  const todayKey = toDateKey(new Date());
   const { data, error } = await supabase
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .eq("content_type", "promotion")
+    .gte("end_date", todayKey)
     .order("base_score", { ascending: false, nullsFirst: false })
     .limit(60);
   if (error) throw error;
@@ -283,10 +344,12 @@ export async function getUpcomingPromotions(
   const today = toDateKey(new Date());
   const until = toDateKey(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
 
+  // Timeline shows time-bound things you can act on: deals + events.
   let q = supabase
     .from("promotions")
     .select(SELECT)
     .eq("status", "active")
+    .in("content_type", ["promotion", "event"])
     .gte("end_date", today) // still running or future
     .lte("start_date", until) // starts within the window
     .order("start_date", { ascending: true })
@@ -326,10 +389,13 @@ export async function getSavedPromotions(): Promise<Promotion[]> {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const todaySaved = toDateKey(new Date());
   const { data, error } = await supabase
     .from("saved_promotions")
     .select("promotion:promotions(*)")
     .eq("user_id", user.id)
+    .eq("promotion.status", "active")
+    .gte("promotion.end_date", todaySaved)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
