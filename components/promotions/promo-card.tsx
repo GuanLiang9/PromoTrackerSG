@@ -29,23 +29,27 @@ export function PromoCard({
       <Link href={`/promotions/${promotion.id}`} className="flex flex-1 flex-col">
         {!compact && (
           <div className="relative aspect-[16/10] shrink-0 overflow-hidden">
-            {promotion.imageUrl ? (
+            {/* Emoji/tint placeholder sits underneath; the image covers it when
+                it loads and is hidden (revealing the placeholder) on error. */}
+            <div className={cn("absolute inset-0 flex items-center justify-center", meta.chipClass)}>
+              <span className="select-none text-5xl opacity-60 transition-transform duration-300 group-hover:scale-110">
+                {meta.emoji}
+              </span>
+            </div>
+            {promotion.imageUrl && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={promotion.imageUrl}
                   alt=""
-                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
+                  className="relative h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
               </>
-            ) : (
-              <div className={cn("flex h-full w-full items-center justify-center", meta.chipClass)}>
-                <span className="select-none text-5xl opacity-60 transition-transform duration-300 group-hover:scale-110">
-                  {meta.emoji}
-                </span>
-              </div>
             )}
 
             {/* Category chip — bottom-left, glassy on image */}

@@ -64,9 +64,6 @@ export class TelegramAdapter implements SourceAdapter {
       const text = htmlToText(textMatch[1]);
       if (text.length < 15) continue;
 
-      const photo = chunk.match(
-        /background-image:url\('([^']+)'\)/,
-      );
       const time = chunk.match(/datetime="([^"]+)"/);
 
       const publishedAt = time ? time[1] : undefined;
@@ -77,12 +74,15 @@ export class TelegramAdapter implements SourceAdapter {
         if (ageMs > 14 * 24 * 60 * 60 * 1000) continue;
       }
 
+      // Note: we intentionally don't capture the Telegram preview photo —
+      // its cdn (telesco.pe) URLs are short-lived tokens that 404 within hours.
+      // The ingest route fills a stable stock photo via resolveImage instead.
       items.push({
         externalId: `telegram:${externalId}`,
         sourceName: this.name,
         sourceUrl: `https://t.me/${externalId}`,
         text,
-        imageUrl: photo ? photo[1] : undefined,
+        imageUrl: undefined,
         publishedAt,
       });
     }

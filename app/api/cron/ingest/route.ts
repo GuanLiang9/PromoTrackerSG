@@ -6,6 +6,7 @@ import { OpenRouterExtractor } from "@/lib/ingestion/openrouter-extractor";
 import { classifyContentType } from "@/lib/ingestion/extractor";
 import { upsertPromotions } from "@/lib/ingestion/upsert";
 import { geocodeFromDictionary, geocodeLocation } from "@/lib/ingestion/geocode";
+import { resolveImage } from "@/lib/ingestion/image-resolver";
 
 // Blog / review channels post mostly editorial (reviews, features, roundups);
 // bias them toward 'news' unless their title carries a real deal.
@@ -112,6 +113,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Give every imageless promo a relevant stock photo (free, deterministic) so
+  // no card renders as a bare placeholder.
+  let imaged = 0;
+  for (const p of normalized) {
+    if (!p.imageUrl) {
+      p.imageUrl = resolveImage(p.title, p.description, p.category);
+      imaged++;
+    }
+  }
+
   const result = await upsertPromotions(supabase, normalized);
 
   await supabase.from("ingestion_logs").insert({
@@ -126,6 +137,7 @@ export async function POST(request: NextRequest) {
     ai_enabled: extractor.isConfigured,
     found: normalized.length,
     geocoded,
+    imaged,
     ...result,
     ran_at: new Date().toISOString(),
   });
