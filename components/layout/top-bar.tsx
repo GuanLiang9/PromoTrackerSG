@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NavLinks } from "@/components/layout/nav-links";
+import { AccountMenu } from "@/components/layout/account-menu";
 
 export function TopBar() {
   return (
@@ -14,7 +15,10 @@ export function TopBar() {
           </span>
         </Link>
 
-        <NavLinks />
+        <div className="flex items-center gap-2">
+          <NavLinks />
+          <AccountMenu />
+        </div>
       </div>
     </header>
   );

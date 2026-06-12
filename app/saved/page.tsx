@@ -33,7 +33,7 @@ export default async function SavedPage() {
           Sign in to bookmark promotions and get reminders before they expire.
         </p>
         <Button asChild>
-          <Link href="/auth/login">Sign in</Link>
+          <Link href="/auth/login?next=/saved">Sign in / Create account</Link>
         </Button>
       </div>
     );
