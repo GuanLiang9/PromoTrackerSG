@@ -34,6 +34,7 @@ const DOT_HEX: Record<Promotion["category"], string> = {
 const LAYER_HEX: Record<StaticPin["layer"], string> = {
   food: "#f97316",
   gem: "#8b5cf6",
+  spot: "#10b981",
 };
 
 const iconCache = new Map<string, L.DivIcon>();

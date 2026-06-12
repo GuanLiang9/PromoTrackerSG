@@ -4,6 +4,7 @@ import "./globals.css";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { InstallPrompt } from "@/components/layout/install-prompt";
+import { CheckInFab } from "@/components/checkins/check-in-fab";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -52,6 +53,7 @@ export default function RootLayout({
           {children}
         </main>
         <BottomNav />
+        <CheckInFab />
         <InstallPrompt />
       </body>
     </html>

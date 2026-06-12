@@ -24,23 +24,26 @@ const MapView = dynamic(() => import("@/components/map/map-view"), {
   ),
 });
 
-type MapLayer = "deals" | "food" | "gems";
+type MapLayer = "deals" | "food" | "gems" | "spots";
 
 const LAYER_TABS: { value: MapLayer; label: string; emoji: string }[] = [
   { value: "deals", label: "Deals", emoji: "🏷️" },
   { value: "food",  label: "Food",  emoji: "🍜" },
   { value: "gems",  label: "Gems",  emoji: "💎" },
+  { value: "spots", label: "Spots", emoji: "📍" },
 ];
 
 export function MapRoot({
   promotions,
   foodPins,
   gemPins,
+  spotPins,
   focusId,
 }: {
   promotions: Promotion[];
   foodPins: StaticPin[];
   gemPins: StaticPin[];
+  spotPins: StaticPin[];
   focusId?: string | null;
 }) {
   const [layer, setLayer] = React.useState<MapLayer>("deals");
@@ -71,14 +74,17 @@ export function MapRoot({
 
   const hotZones = React.useMemo(() => computeHotZones(visibleDeals), [visibleDeals]);
 
-  const currentStaticPins = layer === "food" ? foodPins : layer === "gems" ? gemPins : [];
+  const currentStaticPins =
+    layer === "food" ? foodPins : layer === "gems" ? gemPins : layer === "spots" ? spotPins : [];
 
   const totalPins =
     layer === "deals"
       ? visibleDeals.length
       : layer === "food"
       ? foodPins.length
-      : gemPins.length;
+      : layer === "gems"
+      ? gemPins.length
+      : spotPins.length;
 
   const onSelectDeal = React.useCallback((p: Promotion) => {
     setSelected(p);
@@ -200,6 +206,16 @@ export function MapRoot({
           </div>
         )}
 
+        {/* Spots layer hint */}
+        {layer === "spots" && (
+          <div className="pointer-events-auto rounded-xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-zinc-600 shadow backdrop-blur-xl">
+            📍 {spotPins.length} community check-ins ·{" "}
+            <Link href="/spots" className="font-medium text-zinc-900 underline-offset-2 hover:underline">
+              view feed
+            </Link>
+          </div>
+        )}
+
         {/* Hot zones (deals only) */}
         {layer === "deals" && hotZones.length > 0 && (
           <div className="no-scrollbar pointer-events-auto flex items-center gap-2 overflow-x-auto">
@@ -232,7 +248,7 @@ export function MapRoot({
 
       {/* Count pill */}
       <div className="pointer-events-none absolute bottom-4 left-4 z-[1000] rounded-full bg-zinc-900/80 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-        {totalPins} {layer === "deals" ? "deal" : layer === "food" ? "spot" : "gem"}{totalPins === 1 ? "" : "s"}
+        {totalPins} {layer === "deals" ? "deal" : layer === "gems" ? "gem" : "spot"}{totalPins === 1 ? "" : "s"}
       </div>
 
       {/* Deal bottom card */}

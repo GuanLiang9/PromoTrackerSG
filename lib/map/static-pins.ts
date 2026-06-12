@@ -1,4 +1,4 @@
-export type PinLayer = "food" | "gem";
+export type PinLayer = "food" | "gem" | "spot";
 
 export interface StaticPin {
   id: string;
@@ -20,6 +20,7 @@ import type { FoodSpot } from "@/lib/food/spots";
 import { CUISINE_META } from "@/lib/food/spots";
 import type { HiddenGem } from "@/lib/gems/gems";
 import { GEM_CATEGORY_META } from "@/lib/gems/gems";
+import type { CheckIn } from "@/lib/checkins/types";
 
 export function foodSpotToPin(s: FoodSpot): StaticPin | null {
   if (s.lat == null || s.lng == null) return null;
@@ -36,6 +37,23 @@ export function foodSpotToPin(s: FoodSpot): StaticPin | null {
     description: s.mustTry.slice(0, 2).join(", "),
     mapsUrl: s.mapsUrl,
     tag: meta.label,
+  };
+}
+
+export function checkInToPin(c: CheckIn): StaticPin {
+  const meta = c.cuisine ? CUISINE_META[c.cuisine] : null;
+  return {
+    id: `spot-${c.id}`,
+    name: c.venueName,
+    lat: c.latitude,
+    lng: c.longitude,
+    layer: "spot",
+    emoji: meta?.emoji ?? "🍴",
+    bg: meta?.bg ?? "bg-zinc-100 text-zinc-800",
+    area: c.area ?? "Singapore",
+    description: c.note ?? `Checked in by ${c.authorName}`,
+    mapsUrl: `https://www.google.com/maps/search/?api=1&query=${c.latitude},${c.longitude}`,
+    tag: meta?.label ?? "Community spot",
   };
 }
 
