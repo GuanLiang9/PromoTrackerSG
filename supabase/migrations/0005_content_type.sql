@@ -36,6 +36,7 @@ where content_type = 'promotion'
        title ~* '\y(opens?|opening|now open|reopens?|launch(es|ed|ing)?|unveil(s|ed)?|introduc(e|es|ed|ing)|debuts?|arrives?|closing|closes?|permanently close|shuts? down)\y'
     or title ~* '\y(review|guide|directory|itinerary|michelin|recommendation)\y'
     or title ~* '(\y\d+\s+(best|fresh|new|top|must)\b|\ytop\s+\d+\b|\bbest\b.*\bin singapore\b|\bwhere to\b|\bhow to\b)'
+    or title ~* '\y\d+\s+[\w-]+\s+(spots|places|cafes|cafés|restaurants|stalls|eateries|bars|bakeries|hawkers?|joints)\b'
     or title ~* '^\s*(\[new\]|\[new post\]|new post|\[foodiehypenow|pinned)'
     or title ~* '\y(do you need|what.?s happening|never go hungry)\y'
   )

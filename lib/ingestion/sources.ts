@@ -16,9 +16,11 @@ export function buildAdapters(limit = 8): SourceAdapter[] {
     new TelegramAdapter("SG Deal", "sgdeal", limit),
     new TelegramAdapter("Sing Promos", "SingPromos", limit),
     new TelegramAdapter("Burpple Beyond", "burpplebeyond", limit),
+    new TelegramAdapter("GoodLobang", "goodlobang", limit),
 
     // ── Food-focused Telegram channels ───────────────────────────────────
     new TelegramAdapter("SG Foodie Deals", "SgFoodieDeals", limit),
+    new TelegramAdapter("SG Food Deals", "sgfooddeals", limit),
     new TelegramAdapter("Eatbook SG", "eatbooksg", limit),
     new TelegramAdapter("Daniel Food Diary", "danielfooddiary", limit),
     new TelegramAdapter("SG Foodies", "sgfoodies", limit),

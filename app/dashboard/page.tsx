@@ -72,6 +72,12 @@ export default async function DashboardPage() {
     getEvents(12),
   ]);
 
+  const today = new Date().toLocaleDateString("en-SG", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
   const summaryItems = summary
     ? ([
         { label: "🍜 Best food deals", text: summary.food },
@@ -83,31 +89,31 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <div className="animate-fade-in-up relative overflow-hidden rounded-2xl border bg-card p-6 sm:p-8">
+      <div className="animate-fade-in-up relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-emerald-950 p-6 text-white shadow-float sm:p-8 dark:from-black dark:to-emerald-950/60">
         {/* Decorative glows */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/8 blur-3xl dark:bg-emerald-500/6" />
-        <div className="pointer-events-none absolute -bottom-10 right-40 h-40 w-40 rounded-full bg-violet-500/6 blur-2xl dark:bg-violet-500/5" />
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-12 left-24 h-40 w-40 rounded-full bg-emerald-400/10 blur-2xl" />
 
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
+          <div className="space-y-2.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
               <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-brand" />
-              Live in Singapore
+              Live in Singapore · {today}
             </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              What&apos;s on today 🇸🇬
+            <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-[2.5rem]">
+              Never miss a<br className="hidden sm:block" /> good deal again 🇸🇬
             </h1>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Deals, events and discounts across Singapore — all in one place.
+            <p className="max-w-sm text-sm text-white/70">
+              Every deal, food promo and event across Singapore — curated in one place.
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white">
               <Link href="/timeline">
                 <Clock className="h-4 w-4" /> Timeline
               </Link>
             </Button>
-            <Button asChild>
+            <Button asChild className="bg-brand text-brand-foreground hover:bg-brand/90">
               <Link href="/calendar">
                 <CalendarDays className="h-4 w-4" /> Calendar
               </Link>

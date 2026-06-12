@@ -59,7 +59,7 @@ const DEAL_RE =
 const EVENT_RE =
   /\b(festival|fiesta|carnival|bazaar|pop-?up|pasar malam|night market|expo|funfair|countdown|parade|street fair|fringe)\b/i;
 const NEWS_RE =
-  /\b(opens?|opening|now open|reopens?|launch(?:es|ed|ing)?|unveil(?:s|ed)?|introduc(?:e|es|ed|ing)|debuts?|closing|closes?|shuts? down|review|guide|directory|itinerary|michelin|recommendation|where to|how to)\b|\b\d+\s+(?:best|fresh|new|top|must)\b|\btop\s+\d+\b/i;
+  /\b(opens?|opening|now open|reopens?|launch(?:es|ed|ing)?|unveil(?:s|ed)?|introduc(?:e|es|ed|ing)|debuts?|closing|closes?|shuts? down|review|guide|directory|itinerary|michelin|recommendation|where to|how to)\b|\b\d+\s+(?:best|fresh|new|top|must)\b|\btop\s+\d+\b|\b\d+\s+[\w-]+\s+(?:spots|places|cafes|cafés|restaurants|stalls|eateries|bars|bakeries|hawkers?|joints)\b/i;
 
 /**
  * Classify a title into a content type. Best run on the TITLE (not the body),
