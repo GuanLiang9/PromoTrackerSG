@@ -36,6 +36,7 @@ interface LlmResult {
   endDate?: string | null;
   location?: string | null;
   tags?: string[];
+  imageSubject?: string;
 }
 
 /**
@@ -100,6 +101,10 @@ export class OpenRouterExtractor implements PromotionExtractor {
               .map((t) => t.toLowerCase().trim())
               .slice(0, 8)
           : [],
+        imageSubject:
+          typeof result.imageSubject === "string"
+            ? result.imageSubject.toLowerCase().trim().slice(0, 60)
+            : null,
       };
     } catch (err) {
       console.error(`[openrouter] extract failed, using regex:`, err);
@@ -121,13 +126,18 @@ export class OpenRouterExtractor implements PromotionExtractor {
       "- 'event': a festival, market, pop-up, fair, expo or concert happening on given dates.\n" +
       "- 'news': editorial — a shop/restaurant OPENING or LAUNCH announcement, a review, a guide, a roundup ('10 best…'), or a closure, with NO deal.\n" +
       "A new-shop opening is 'news', NOT a promotion. A place recommendation without a discount is 'food_spot', NOT a promotion. " +
-      "If the post is a job ad, channel advertisement or spam, set isPromotion to false.";
+      "If the post is a job ad, channel advertisement or spam, set isPromotion to false. " +
+      "imageSubject: 2-5 lowercase words naming the single most photogenic, concrete subject a " +
+      "stock photo for this listing should show — the specific dish, product or place, not the " +
+      "brand or the offer. Examples: 'tonkotsu ramen bowl', 'iced brown sugar bubble tea', " +
+      "'grilled chicken burger', 'uniqlo storefront', 'spa massage room'.";
 
     const schema =
       '{"isPromotion": boolean, "contentType": "promotion"|"food_spot"|"event"|"news", ' +
       '"title": string (concise, <=140 chars), ' +
       '"description": string, "category": string, "startDate": string|null, ' +
-      '"endDate": string|null, "location": string|null, "tags": string[] }';
+      '"endDate": string|null, "location": string|null, "tags": string[], ' +
+      '"imageSubject": string }';
 
     const payload = JSON.stringify({
       model: this.model,

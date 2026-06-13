@@ -178,6 +178,24 @@ drop an LLM-backed extractor behind the same `PromotionExtractor` interface to u
 extraction without touching the pipeline. Adapters currently return `[]` with a clearly
 marked `TODO` for live fetching.
 
+### Promo images (relevant + learnable)
+
+Every imageless promo is given an on-topic stock photo so no card renders bare. Resolution
+runs in priority order (`lib/ingestion/image-resolver.ts#resolveImage`):
+
+1. **Learned overrides** — a `image_overrides` keyword→image table consulted first.
+2. **LLM image subject** — the OpenRouter extractor returns an `imageSubject` (e.g. "tonkotsu
+   ramen bowl") in the *same* call it already makes per new promo (zero extra API cost), so the
+   photo reflects the model's read of the post, not just a title keyword.
+3. **Title/description keyword** match against the curated Unsplash dictionary.
+4. **Per-category default**.
+
+**Learning loop:** when an image is wrong, correct it once —
+`node scripts/set-image-override.mjs "<keyword>" "<unsplash-id|url>"`. The script persists the
+override *and* immediately re-images every existing active promo that matches; all future
+ingested promos pick it up automatically. The ingest route reports `image_sources` (how many
+came from override/subject/keyword/category) for QA.
+
 ### Notifications (scaffold)
 
 `lib/notifications/types.ts` defines the `PushPayload` contract and preference model. The

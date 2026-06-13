@@ -113,12 +113,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Give every imageless promo a relevant stock photo (free, deterministic) so
-  // no card renders as a bare placeholder.
+  // Give every imageless promo a relevant stock photo. Resolution order:
+  // learned overrides → LLM image subject → title keyword → category default.
+  const { data: ovRows } = await supabase
+    .from("image_overrides")
+    .select("keyword, image_url");
+  const overrides = new Map<string, string>(
+    (ovRows ?? []).map((r) => [r.keyword as string, r.image_url as string]),
+  );
   let imaged = 0;
+  const imageSources: Record<string, number> = {};
   for (const p of normalized) {
     if (!p.imageUrl) {
-      p.imageUrl = resolveImage(p.title, p.description, p.category);
+      const { url, source } = resolveImage(p.title, p.description, p.category, {
+        subject: p.imageSubject,
+        overrides,
+      });
+      p.imageUrl = url;
+      imageSources[source] = (imageSources[source] ?? 0) + 1;
       imaged++;
     }
   }
@@ -138,6 +150,7 @@ export async function POST(request: NextRequest) {
     found: normalized.length,
     geocoded,
     imaged,
+    image_sources: imageSources,
     ...result,
     ran_at: new Date().toISOString(),
   });

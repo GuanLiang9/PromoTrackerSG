@@ -99,14 +99,29 @@ const KEYWORD_IMAGE = {
 
 const SORTED_KEYS = Object.keys(KEYWORD_IMAGE).sort((a, b) => b.length - a.length);
 
+// Learned overrides (keyword → url), loaded from public.image_overrides below.
+let OVERRIDES = new Map();
+let OVERRIDE_KEYS = [];
+
 function resolveImage(title, description, category) {
   const text = `${title} ${description ?? ""}`.toLowerCase();
-  for (const key of SORTED_KEYS) if (text.includes(key)) return { url: KEYWORD_IMAGE[key], byKeyword: true };
-  return { url: CATEGORY_IMAGE[category] ?? CATEGORY_IMAGE.lifestyle, byKeyword: false };
+  for (const key of OVERRIDE_KEYS) if (text.includes(key)) return { url: OVERRIDES.get(key), source: "override" };
+  for (const key of SORTED_KEYS) if (text.includes(key)) return { url: KEYWORD_IMAGE[key], source: "keyword" };
+  return { url: CATEGORY_IMAGE[category] ?? CATEGORY_IMAGE.lifestyle, source: "category" };
 }
 
 const c = new Client({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
 await c.connect();
+
+// Load learned corrections (applied before the static dictionary).
+try {
+  const { rows: ov } = await c.query(`select keyword, image_url from public.image_overrides`);
+  OVERRIDES = new Map(ov.map((r) => [String(r.keyword).toLowerCase(), r.image_url]));
+  OVERRIDE_KEYS = [...OVERRIDES.keys()].sort((a, b) => b.length - a.length);
+  console.log(`Loaded ${OVERRIDES.size} learned image override(s).`);
+} catch {
+  console.log("image_overrides table not found — skipping overrides (run migration 0007).");
+}
 // Replace missing images AND broken/ephemeral Telegram URLs:
 //  - telesco.pe  → short-lived tokens that 404 within hours
 //  - telegram.org/img/emoji → a tiny emoji icon grabbed by mistake
@@ -119,13 +134,13 @@ const { rows } = await c.query(
 );
 console.log(`Active promos needing an image (null/broken Telegram): ${rows.length}`);
 
-let byKeyword = 0, byCategory = 0;
+const counts = { override: 0, keyword: 0, category: 0 };
 for (const r of rows) {
-  const { url, byKeyword: kw } = resolveImage(r.title, r.description, r.category);
+  const { url, source } = resolveImage(r.title, r.description, r.category);
   await c.query(`update public.promotions set image_url=$1 where id=$2`, [url, r.id]);
-  if (kw) byKeyword++; else byCategory++;
+  counts[source]++;
 }
-console.log(`Filled: ${byKeyword} by keyword, ${byCategory} by category default.`);
+console.log(`Filled: ${counts.override} by override, ${counts.keyword} by keyword, ${counts.category} by category default.`);
 
 const { rows: left } = await c.query(
   `select count(*)::int n from public.promotions

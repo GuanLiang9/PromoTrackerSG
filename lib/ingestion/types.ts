@@ -31,6 +31,11 @@ export interface ExtractedPromotion {
   endDate: string | null;
   location: string | null;
   tags: string[];
+  /**
+   * LLM-distilled concrete photo subject (e.g. "tonkotsu ramen bowl") used to
+   * pick a relevant stock image. Null when produced by the regex fallback.
+   */
+  imageSubject?: string | null;
 }
 
 /** A source adapter fetches raw items from one channel/feed/site. */

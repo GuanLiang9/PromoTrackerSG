@@ -133,7 +133,7 @@ export function MapRoot({
       : null;
 
   return (
-    <div className="fixed inset-x-0 bottom-[3.5rem] top-14 z-30 overflow-hidden md:static md:bottom-auto md:z-auto md:h-[calc(100dvh-9rem)] md:rounded-2xl md:border">
+    <div className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom)/2)] top-14 z-30 overflow-hidden md:static md:bottom-auto md:z-auto md:h-[calc(100dvh-9rem)] md:rounded-2xl md:border">
       {/* Map */}
       <div className="absolute inset-0">
         <MapView
@@ -150,21 +150,40 @@ export function MapRoot({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] space-y-2 p-3">
         {/* Layer tabs */}
         <div className="pointer-events-auto flex gap-1.5 rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-lg backdrop-blur-xl">
-          {LAYER_TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => switchLayer(t.value)}
-              className={cn(
-                "flex-1 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all",
-                layer === t.value
-                  ? "bg-zinc-900 text-white shadow-sm"
-                  : "text-zinc-600 hover:bg-zinc-100",
-              )}
-            >
-              {t.emoji} {t.label}
-            </button>
-          ))}
+          {LAYER_TABS.map((t) => {
+            const count =
+              t.value === "deals"
+                ? promotions.length
+                : t.value === "food"
+                ? foodPins.length
+                : t.value === "gems"
+                ? gemPins.length
+                : spotPins.length;
+            const active = layer === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => switchLayer(t.value)}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  active ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-600 hover:bg-zinc-100",
+                )}
+              >
+                <span>{t.emoji} {t.label}</span>
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 text-[10px] font-bold leading-4",
+                      active ? "bg-white/25 text-white" : "bg-zinc-900/10 text-zinc-700",
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Category chips (deals only) */}

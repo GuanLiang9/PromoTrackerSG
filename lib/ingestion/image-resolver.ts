@@ -200,18 +200,57 @@ const KEYWORD_IMAGE: Record<string, string> = {
 // Pre-sort keys longest-first so multi-word keys win over their substrings.
 const SORTED_KEYS = Object.keys(KEYWORD_IMAGE).sort((a, b) => b.length - a.length);
 
+/** Where the resolved image came from — useful for QA/logging. */
+export type ImageSource = "override" | "subject" | "keyword" | "category";
+
+export interface ResolvedImage {
+  url: string;
+  source: ImageSource;
+}
+
+function matchLongest(keys: string[], text: string): string | null {
+  for (const k of keys) if (text.includes(k)) return k;
+  return null;
+}
+
 /**
- * Resolve a relevant stock image for a promotion. Always returns a URL — a
- * keyword match if found, otherwise the category default.
+ * Resolve a relevant stock image for a promotion. Always returns a URL, in
+ * priority order:
+ *   1. a learned `override` (longest matching keyword) — corrections persist;
+ *   2. the LLM-provided `subject` matched against the keyword dictionary;
+ *   3. a title/description keyword match;
+ *   4. the per-category default (never null).
  */
 export function resolveImage(
   title: string,
   description: string | null | undefined,
   category: PromoCategory,
-): string {
-  const text = `${title} ${description ?? ""}`.toLowerCase();
-  for (const key of SORTED_KEYS) {
-    if (text.includes(key)) return KEYWORD_IMAGE[key];
+  opts: { subject?: string | null; overrides?: Map<string, string> } = {},
+): ResolvedImage {
+  const subject = (opts.subject ?? "").toLowerCase();
+  const body = `${title} ${description ?? ""}`.toLowerCase();
+  const all = `${subject} ${body}`;
+
+  // 1. Learned overrides take precedence over everything.
+  const overrides = opts.overrides;
+  if (overrides && overrides.size) {
+    const k = matchLongest(
+      [...overrides.keys()].sort((a, b) => b.length - a.length),
+      all,
+    );
+    if (k) return { url: overrides.get(k)!, source: "override" };
   }
-  return CATEGORY_IMAGE[category];
+
+  // 2. LLM subject → dictionary (the LLM's read of the post wins over raw title).
+  if (subject) {
+    const k = matchLongest(SORTED_KEYS, subject);
+    if (k) return { url: KEYWORD_IMAGE[k], source: "subject" };
+  }
+
+  // 3. Title/description keyword.
+  const k = matchLongest(SORTED_KEYS, body);
+  if (k) return { url: KEYWORD_IMAGE[k], source: "keyword" };
+
+  // 4. Category default.
+  return { url: CATEGORY_IMAGE[category], source: "category" };
 }
