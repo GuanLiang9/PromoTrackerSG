@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NavLinks } from "@/components/layout/nav-links";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { RewardsButton } from "@/components/rewards/rewards-button";
 
 export function TopBar() {
   return (
@@ -17,6 +18,7 @@ export function TopBar() {
 
         <div className="flex items-center gap-2">
           <NavLinks />
+          <RewardsButton />
           <AccountMenu />
         </div>
       </div>

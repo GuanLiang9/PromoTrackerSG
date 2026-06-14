@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, CalendarDays, LayoutGrid, MapPin, Search, Utensils } from "lucide-react";
+import { Bookmark, CalendarDays, LayoutGrid, MapPin, Search, Trophy, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/map", label: "Map", icon: MapPin },
   { href: "/spots", label: "Spots", icon: Utensils },
+  { href: "/rewards", label: "Rewards", icon: Trophy },
   { href: "/saved", label: "Saved", icon: Bookmark },
 ];
 

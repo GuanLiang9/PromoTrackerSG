@@ -178,6 +178,25 @@ drop an LLM-backed extractor behind the same `PromotionExtractor` interface to u
 extraction without touching the pipeline. Adapters currently return `[]` with a clearly
 marked `TODO` for live fetching.
 
+### Rewards (Swarm-style gamification)
+
+Turns daily check-ins into a game — entirely **derived from `check_ins`**, no extra writes.
+
+- **Streaks** — consecutive-day check-in streak on the `Asia/Singapore` day boundary (current +
+  longest + a "last 7 days" strip and a "don't break it today" nudge).
+- **Points & levels** — `points = check_ins×10 + distinctVenues×15 + distinctDays×5`, rolled into
+  food-explorer levels (🌱 Newbie → 👑 Legend).
+- **Badges** — ~11 unlockable stickers (first check-in, 7-day streak, area explorer, cuisine
+  variety, "Regular Here", Centurion…).
+- **Leaderboard** — public ranking with the signed-in user pinned even when outside the top.
+
+The engine lives in `lib/rewards/` (pure, unit-tested, client-safe). Personal stats are computed
+in JS from the user's own rows; the leaderboard reads one aggregate view,
+`user_check_in_stats` (`supabase/migrations/0008_rewards.sql`, `security_invoker` so it inherits
+check_ins' public-read RLS — only counts + the public author name, no emails). The points formula
+is **identical** in the view and in `lib/rewards/compute.ts`, so personal and leaderboard totals
+always match. Surfaced at `/rewards`, with a top-bar trophy that shows the live streak flame.
+
 ### Promo images (relevant + learnable)
 
 Every imageless promo is given an on-topic stock photo so no card renders bare. Resolution
