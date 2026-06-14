@@ -14,6 +14,8 @@ export interface StaticPin {
   mapsUrl: string;
   /** Extra label shown in filter chips */
   tag: string;
+  /** Country code for map filter chip — "SG" | "MY" */
+  country?: string;
 }
 
 import type { FoodSpot } from "@/lib/food/spots";
@@ -37,6 +39,7 @@ export function foodSpotToPin(s: FoodSpot): StaticPin | null {
     description: s.mustTry.slice(0, 2).join(", "),
     mapsUrl: s.mapsUrl,
     tag: meta.label,
+    country: s.country ?? "SG",
   };
 }
 

@@ -12,7 +12,8 @@ export type CuisineType =
   | "peranakan"
   | "thai"
   | "vietnamese"
-  | "supper";
+  | "supper"
+  | "mamak";
 
 export type PriceRange = "budget" | "mid" | "splurge";
 
@@ -30,6 +31,7 @@ export interface FoodSpot {
   tip?: string;
   lat?: number;
   lng?: number;
+  country?: "SG" | "MY";
 }
 
 export const CUISINE_META: Record<CuisineType, { label: string; emoji: string; bg: string }> = {
@@ -47,6 +49,7 @@ export const CUISINE_META: Record<CuisineType, { label: string; emoji: string; b
   thai:       { label: "Thai",       emoji: "🍲", bg: "bg-lime-100 text-lime-800" },
   vietnamese: { label: "Vietnamese", emoji: "🍜", bg: "bg-teal-100 text-teal-800" },
   supper:     { label: "Supper",     emoji: "🌙", bg: "bg-indigo-100 text-indigo-800" },
+  mamak:      { label: "Mamak",      emoji: "🍵", bg: "bg-green-100 text-green-800" },
 };
 
 export const PRICE_META: Record<PriceRange, { label: string; badge: string }> = {

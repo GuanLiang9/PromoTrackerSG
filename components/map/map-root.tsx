@@ -47,6 +47,7 @@ export function MapRoot({
   focusId?: string | null;
 }) {
   const [layer, setLayer] = React.useState<MapLayer>("deals");
+  const [countryFilter, setCountryFilter] = React.useState<"all" | "SG" | "MY">("all");
   const [activeCategories, setActiveCategories] = React.useState<Set<PromoCategory>>(new Set());
   const [selected, setSelected] = React.useState<Promotion | null>(null);
   const [selectedPin, setSelectedPin] = React.useState<StaticPin | null>(null);
@@ -74,14 +75,22 @@ export function MapRoot({
 
   const hotZones = React.useMemo(() => computeHotZones(visibleDeals), [visibleDeals]);
 
+  const visibleFoodPins = React.useMemo(
+    () =>
+      countryFilter === "all"
+        ? foodPins
+        : foodPins.filter((p) => p.country === countryFilter),
+    [foodPins, countryFilter],
+  );
+
   const currentStaticPins =
-    layer === "food" ? foodPins : layer === "gems" ? gemPins : layer === "spots" ? spotPins : [];
+    layer === "food" ? visibleFoodPins : layer === "gems" ? gemPins : layer === "spots" ? spotPins : [];
 
   const totalPins =
     layer === "deals"
       ? visibleDeals.length
       : layer === "food"
-      ? foodPins.length
+      ? visibleFoodPins.length
       : layer === "gems"
       ? gemPins.length
       : spotPins.length;
@@ -100,6 +109,17 @@ export function MapRoot({
     setLayer(l);
     setSelected(null);
     setSelectedPin(null);
+  }
+
+  function switchCountry(c: "all" | "SG" | "MY") {
+    setCountryFilter(c);
+    setSelected(null);
+    setSelectedPin(null);
+    if (c === "MY") {
+      setFlyTarget({ lat: 1.4927, lng: 103.7414, zoom: 13, nonce: Date.now() });
+    } else if (c === "SG") {
+      setFlyTarget({ lat: 1.3521, lng: 103.8198, zoom: 12, nonce: Date.now() });
+    }
   }
 
   function toggleCategory(cat: PromoCategory) {
@@ -186,6 +206,27 @@ export function MapRoot({
           })}
         </div>
 
+        {/* Country filter chips (food layer only) */}
+        {layer === "food" && (
+          <div className="pointer-events-auto flex gap-2 rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
+            {(["all", "SG", "MY"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => switchCountry(c)}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  countryFilter === c
+                    ? "bg-zinc-900 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100",
+                )}
+              >
+                {c === "all" ? "🌏 All" : c === "SG" ? "🇸🇬 Singapore" : "🇲🇾 JB"}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Category chips (deals only) */}
         {layer === "deals" && (
           <div className="no-scrollbar pointer-events-auto flex gap-2 overflow-x-auto rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
@@ -211,7 +252,7 @@ export function MapRoot({
         {/* Food layer hint */}
         {layer === "food" && (
           <div className="pointer-events-auto rounded-xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-zinc-600 shadow backdrop-blur-xl">
-            🍜 {foodPins.length} curated food spots · tap a pin to explore
+            🍜 {visibleFoodPins.length} curated {countryFilter === "MY" ? "JB" : countryFilter === "SG" ? "SG" : "SG + JB"} food spots · tap a pin to explore
           </div>
         )}
 
