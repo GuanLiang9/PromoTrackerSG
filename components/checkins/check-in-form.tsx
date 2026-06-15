@@ -4,10 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronLeft, Crosshair, Loader2, MapPin, Star } from "lucide-react";
+import { ChevronLeft, Crosshair, Loader2, MapPin, Sparkles, Star } from "lucide-react";
 import { CUISINE_META, type CuisineType } from "@/lib/food/spots";
 import { createCheckIn } from "@/lib/checkins/actions";
+import { useToast } from "@/components/feedback/toast-provider";
 import { cn } from "@/lib/utils";
+import type { NearbyVenue } from "@/lib/venues/nearby";
 
 const SG_CENTER = { lat: 1.3521, lng: 103.8198 };
 const CUISINES = Object.entries(CUISINE_META) as [CuisineType, (typeof CUISINE_META)[CuisineType]][];
@@ -23,6 +25,7 @@ const PickLocationMap = dynamic(() => import("@/components/checkins/pick-locatio
 
 export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }) {
   const router = useRouter();
+  const { toast, celebrate } = useToast();
   const [pos, setPos] = React.useState(SG_CENTER);
   const [located, setLocated] = React.useState(false);
   const [venueName, setVenueName] = React.useState("");
@@ -33,6 +36,43 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
   const [note, setNote] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [nearby, setNearby] = React.useState<NearbyVenue[]>([]);
+  const [loadingNearby, setLoadingNearby] = React.useState(false);
+  const [picked, setPicked] = React.useState<string | null>(null);
+
+  // Fetch nearby venues whenever the pin settles (debounced + abortable).
+  React.useEffect(() => {
+    if (!located) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      setLoadingNearby(true);
+      try {
+        const res = await fetch(`/api/venues/nearby?lat=${pos.lat}&lng=${pos.lng}`, {
+          signal: ctrl.signal,
+        });
+        const data = (await res.json()) as { venues: NearbyVenue[]; area: string | null };
+        setNearby(data.venues ?? []);
+        // Auto-fill area only if the user hasn't typed one.
+        if (data.area) setArea((prev) => prev || data.area!);
+      } catch {
+        /* ignore network/abort errors */
+      } finally {
+        setLoadingNearby(false);
+      }
+    }, 600);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+    // Round to ~11m so tiny drags don't refetch constantly.
+  }, [located, pos.lat.toFixed(4), pos.lng.toFixed(4)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function pickVenue(v: NearbyVenue) {
+    setVenueName(v.name);
+    setPicked(v.name);
+    if (v.cuisine) setCuisine(v.cuisine);
+    if (v.area) setArea(v.area);
+  }
 
   const locate = React.useCallback(() => {
     if (!navigator.geolocation) return;
@@ -73,6 +113,14 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
       setError(res.error ?? "Something went wrong.");
       setSubmitting(false);
       return;
+    }
+    if (res.reward) {
+      const gained = res.reward.pointsGained;
+      toast({
+        title: "Checked in! 🎉",
+        description: gained > 0 ? `+${gained} points earned` : undefined,
+      });
+      celebrate(res.reward);
     }
     router.push("/spots");
     router.refresh();
@@ -123,11 +171,55 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
           </p>
         </div>
 
+        {/* Nearby venues — auto-populate from curated list + OpenStreetMap */}
+        {(loadingNearby || nearby.length > 0) && (
+          <div className="space-y-1.5">
+            <FieldLabel>
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-brand" /> Nearby — tap to autofill
+              </span>
+            </FieldLabel>
+            {loadingNearby && nearby.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Finding places around you…</p>
+            ) : (
+              <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+                {nearby.map((v) => {
+                  const meta = v.cuisine ? CUISINE_META[v.cuisine] : null;
+                  const active = picked === v.name;
+                  return (
+                    <button
+                      key={`${v.source}-${v.name}-${v.distanceM}`}
+                      type="button"
+                      onClick={() => pickVenue(v)}
+                      className={cn(
+                        "flex shrink-0 max-w-[200px] flex-col items-start gap-0.5 rounded-2xl border px-3 py-2 text-left transition-colors",
+                        active
+                          ? "border-brand bg-brand/10"
+                          : "border-border bg-card hover:border-foreground/30",
+                      )}
+                    >
+                      <span className="line-clamp-1 text-xs font-semibold">
+                        {meta?.emoji ?? "📍"} {v.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {v.distanceM} m{v.area ? ` · ${v.area}` : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Venue name */}
         <Field label="Venue name" required>
           <input
             value={venueName}
-            onChange={(e) => setVenueName(e.target.value)}
+            onChange={(e) => {
+              setVenueName(e.target.value);
+              setPicked(null);
+            }}
             placeholder="e.g. Toast Box @ Tampines"
             maxLength={120}
             className={inputCls}

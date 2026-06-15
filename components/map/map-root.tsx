@@ -33,21 +33,29 @@ const LAYER_TABS: { value: MapLayer; label: string; emoji: string }[] = [
   { value: "spots", label: "Spots", emoji: "📍" },
 ];
 
+type SpotScope = "all" | "friends" | "mine";
+
 export function MapRoot({
   promotions,
   foodPins,
   gemPins,
   spotPins,
+  currentUserId = null,
+  friendIds = [],
   focusId,
 }: {
   promotions: Promotion[];
   foodPins: StaticPin[];
   gemPins: StaticPin[];
   spotPins: StaticPin[];
+  currentUserId?: string | null;
+  friendIds?: string[];
   focusId?: string | null;
 }) {
   const [layer, setLayer] = React.useState<MapLayer>("deals");
   const [countryFilter, setCountryFilter] = React.useState<"all" | "SG" | "MY">("all");
+  const [spotScope, setSpotScope] = React.useState<SpotScope>("all");
+  const friendSet = React.useMemo(() => new Set(friendIds), [friendIds]);
   const [activeCategories, setActiveCategories] = React.useState<Set<PromoCategory>>(new Set());
   const [selected, setSelected] = React.useState<Promotion | null>(null);
   const [selectedPin, setSelectedPin] = React.useState<StaticPin | null>(null);
@@ -83,8 +91,15 @@ export function MapRoot({
     [foodPins, countryFilter],
   );
 
+  const visibleSpotPins = React.useMemo(() => {
+    if (spotScope === "mine") return spotPins.filter((p) => p.userId === currentUserId);
+    if (spotScope === "friends")
+      return spotPins.filter((p) => (p.userId && friendSet.has(p.userId)) || p.userId === currentUserId);
+    return spotPins;
+  }, [spotPins, spotScope, currentUserId, friendSet]);
+
   const currentStaticPins =
-    layer === "food" ? visibleFoodPins : layer === "gems" ? gemPins : layer === "spots" ? spotPins : [];
+    layer === "food" ? visibleFoodPins : layer === "gems" ? gemPins : layer === "spots" ? visibleSpotPins : [];
 
   const totalPins =
     layer === "deals"
@@ -93,7 +108,7 @@ export function MapRoot({
       ? visibleFoodPins.length
       : layer === "gems"
       ? gemPins.length
-      : spotPins.length;
+      : visibleSpotPins.length;
 
   const onSelectDeal = React.useCallback((p: Promotion) => {
     setSelected(p);
@@ -227,6 +242,30 @@ export function MapRoot({
           </div>
         )}
 
+        {/* Spots scope chips (spots layer only, signed-in) */}
+        {layer === "spots" && currentUserId && (
+          <div className="pointer-events-auto flex gap-2 rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
+            {(["all", "friends", "mine"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setSpotScope(s);
+                  setSelectedPin(null);
+                }}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  spotScope === s
+                    ? "bg-zinc-900 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100",
+                )}
+              >
+                {s === "all" ? "🌏 All" : s === "friends" ? "👥 Friends" : "📍 Mine"}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Category chips (deals only) */}
         {layer === "deals" && (
           <div className="no-scrollbar pointer-events-auto flex gap-2 overflow-x-auto rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
@@ -269,7 +308,7 @@ export function MapRoot({
         {/* Spots layer hint */}
         {layer === "spots" && (
           <div className="pointer-events-auto rounded-xl border border-white/40 bg-white/80 px-3 py-2 text-xs text-zinc-600 shadow backdrop-blur-xl">
-            📍 {spotPins.length} community check-ins ·{" "}
+            📍 {visibleSpotPins.length} {spotScope === "all" ? "community" : spotScope === "friends" ? "friends'" : "your"} check-ins ·{" "}
             <Link href="/spots" className="font-medium text-zinc-900 underline-offset-2 hover:underline">
               view feed
             </Link>

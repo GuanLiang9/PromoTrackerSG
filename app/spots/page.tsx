@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SpotsClient } from "@/components/checkins/spots-client";
 import { SetupNotice } from "@/components/layout/setup-notice";
 import { getRecentCheckIns, getCurrentUserId } from "@/lib/checkins/queries";
+import { getAcceptedFriendIds } from "@/lib/friends/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const metadata: Metadata = {
@@ -17,6 +18,13 @@ export default async function SpotsPage() {
     getRecentCheckIns(),
     getCurrentUserId(),
   ]);
+  const friendIds = currentUserId ? await getAcceptedFriendIds(currentUserId) : [];
 
-  return <SpotsClient checkIns={checkIns} currentUserId={currentUserId} />;
+  return (
+    <SpotsClient
+      checkIns={checkIns}
+      currentUserId={currentUserId}
+      friendIds={friendIds}
+    />
+  );
 }

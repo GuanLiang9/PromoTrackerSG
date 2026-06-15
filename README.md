@@ -6,9 +6,11 @@ Stop scrolling through Telegram channels and a dozen deal sites — just open th
 see what's on, any day.
 
 > **Status:** Calendar-centric MVP, now with a clustered **map view**, curated food/gems
-> guides, and **Community Spots** — Swarm-style restaurant check-ins. The full UI (calendar,
-> dashboard, search, saved, map, spots, email+password auth, dark mode, PWA install) runs on
-> live Supabase data. Data ingestion, AI extraction, push delivery and admin are scaffolded
+> guides, and a full **Swarm-style social layer** — restaurant check-ins with smart
+> auto-populated venues, a personal **timeline**, **profiles** (avatar, bio, level), a
+> **friends** graph, in-app **celebrations**, and a rewards system (streaks, points, levels,
+> badges, quests, global + friends leaderboards). The full UI runs on live Supabase data with
+> Row Level Security. Data ingestion, AI extraction, push delivery and admin are scaffolded
 > behind clean interfaces to extend next.
 
 ---
@@ -47,6 +49,11 @@ node --env-file=.env.local scripts/run-sql.mjs `
   supabase/migrations/0004_phase2.sql `
   supabase/migrations/0005_content_type.sql `
   supabase/migrations/0006_check_ins.sql `
+  supabase/migrations/0007_image_overrides.sql `
+  supabase/migrations/0008_rewards.sql `
+  supabase/migrations/0009_profiles.sql `
+  supabase/migrations/0010_friends.sql `
+  supabase/migrations/0011_badges.sql `
   supabase/seed.sql
 #    (or paste each file into the Supabase SQL editor and run)
 
@@ -66,6 +73,8 @@ Without Supabase keys the app still boots and shows a friendly setup notice inst
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Vitest unit tests |
 | `node --env-file=.env.local scripts/e2e-checkins.mjs` | End-to-end RLS test for Community Spots |
+| `node --env-file=.env.local scripts/e2e-social.mjs` | End-to-end RLS test for profiles, friends, badges, leaderboard view + avatar Storage |
+| `node scripts/deploy-pages.mjs` | Build + deploy to Cloudflare Pages (reads CF creds from `.env.local`) |
 
 ---
 
@@ -87,11 +96,19 @@ Without Supabase keys the app still boots and shows a friendly setup notice inst
 The schema (across `supabase/migrations/*`) includes:
 - `promotions` with a trigger-maintained `tsvector` `search_vector` (GIN-indexed) for
   full-text search, plus indexes on `(status, start_date, end_date)`, `category` and `tags`.
-- `profiles` (auto-created on signup via trigger), `saved_promotions`, `user_preferences`,
-  `engagement_events`, and `sources` / `ingestion_logs` for the ingestion/admin scaffold.
+- `profiles` (auto-created on signup via trigger) carrying `display_name`, `username` (unique),
+  `bio` and `avatar_url`; `saved_promotions`, `user_preferences`, `engagement_events`, and
+  `sources` / `ingestion_logs` for the ingestion/admin scaffold.
+- `public_profiles` — a **security-definer view** exposing only the safe public columns
+  (name/username/avatar/bio, never email) so feeds, leaderboards and friend search can show
+  live identities without touching the owner-only `profiles` table.
 - `check_ins` — user-generated restaurant check-ins for **Community Spots** (see below).
+- `friendships` — request/accept friend graph (`pending` → `accepted`); `user_badges` —
+  persisted badge unlocks so each achievement celebrates exactly once.
+- `avatars` **Storage bucket** — public-read, owner-write scoped to a `{uid}/` folder prefix.
 - **Row Level Security**: active promotions are public; profiles, preferences and saved
-  promotions are owner-only; check-ins are **public-read, owner-write**.
+  promotions are owner-only; check-ins and badges are **public-read, owner-write**; friendship
+  rows are visible only to the two parties.
 
 ---
 
@@ -106,28 +123,41 @@ app/                      Routes (App Router)
   saved/                  User bookmarks
   map/                    Leaflet map — Deals / Food / Gems / Spots layers + clustering
   eat/ gems/              Curated food recommendations + hidden-gems guides
-  spots/                  Community Spots feed (user check-ins, All / Mine)
-  check-in/               Check-in flow — GPS + draggable pin + rating + note
+  spots/                  Community Spots feed (user check-ins, All / Friends / Mine)
+  check-in/               Check-in flow — GPS + draggable pin + auto-populated venue + rating
+  profile/  u/[id]/       Own profile (Timeline · Badges · Friends) + public profiles
+  rewards/                Streaks, points/levels, badges, quests, global+friends leaderboard
   auth/                   Email+password login + callback
+  api/venues/nearby/      Free nearby-venue lookup (curated + OSM Overpass + Nominatim area)
   api/cron/expire/        Daily expiry job (CRON_SECRET protected)
   manifest.ts, sw.ts      PWA manifest + service worker
 components/
   calendar/               CalendarRoot, MonthGrid, WeekView, DayView, chips, header…
   promotions/             PromoCard, lists, CategoryBadge, SavedButton
   map/                    MapRoot + MapView (dynamic, SSR-off Leaflet)
-  checkins/               CheckInForm, PickLocationMap, CheckInCard, SpotsClient, fab
+  checkins/               CheckInForm (+ nearby picker), PickLocationMap, CheckInCard, SpotsClient
+  profile/                Avatar, ProfileHeader, ProfileTabs, EditProfileSheet
+  friends/                FriendsTab, FriendButton
+  timeline/               CheckInTimeline (personal food history)
+  feedback/               ToastProvider + CelebrationModal (confetti)
+  rewards/                RewardsClient, BadgesGrid
   search/ layout/ ui/     Search controls, app shell, shadcn primitives
 lib/
   calendar/               Date math + promotion→day grouping (the calendar engine)
   promotions/             Queries, Server Actions, mappers, search-param parsing
-  checkins/               Check-in types, queries + Server Actions (create / delete)
+  checkins/               Check-in types, queries + Server Actions (create returns reward delta)
+  profiles/               Profile queries + Server Actions (update, avatar upload)
+  friends/                Friend queries + Server Actions (request / accept / remove / search)
+  venues/                 Nearby venues — curated ranking + OSM Overpass + Nominatim
+  rewards/                compute, levels, badges, quests, delta, leaderboard queries
+  timeline/               Promotion + check-in day buckets
   map/                    StaticPin model + food/gem/check-in → pin adapters
   supabase/               server / client / middleware clients + env guard
   ingestion/              Adapters + extractor + pipeline (scaffold)
   notifications/          Push payload + preference types (scaffold)
   constants.ts            CATEGORY_META — single source of truth for category colors
 supabase/                 SQL migrations + seed
-scripts/                  run-sql + e2e-checkins runners
+scripts/                  run-sql + e2e-checkins + e2e-social + deploy runners
 tests/                    Vitest unit tests
 ```
 
@@ -150,13 +180,15 @@ A lightweight, location-first way for users to log restaurants/cafés they love 
 publicly — think Swarm, focused on Singapore food.
 
 - **Check in** (`/check-in`): on open it requests GPS via the browser geolocation API and drops
-  a **draggable Leaflet pin** to fine-tune the exact spot; add venue name, a 1–5 star rating,
-  cuisine, area and a note. Auth-gated — signed-out users are redirected to login.
-- **Feed** (`/spots`): newest-first card grid of every public check-in, with an **All / Mine**
-  toggle so each user can browse their own food history. Owners get a delete button; relative
-  timestamps via date-fns; one-tap "Open in Maps".
+  a **draggable Leaflet pin** to fine-tune the exact spot. A **"Nearby" picker** then offers
+  real venues around you (see *Smart check-in* below) — tap one to auto-fill venue, cuisine and
+  area, so you only rate + write a note. Auth-gated.
+- **Feed** (`/spots`): newest-first card grid of public check-ins with an **All / Friends / Mine**
+  toggle. Each author links to their profile. Owners get a delete button; relative timestamps via
+  date-fns; one-tap "Open in Maps".
 - **Map** (`/map` → **Spots** layer): every check-in becomes a clustered pin alongside Deals,
-  Food and Gems — reusing the existing `StaticPin` abstraction (`lib/map/static-pins.ts`).
+  Food and Gems — with its own **All / Friends / Mine** scope filter, reusing the existing
+  `StaticPin` abstraction (`lib/map/static-pins.ts`).
 - **Entry point**: a floating "+" check-in FAB (signed-in only) plus a "Spots" nav item.
 
 **Data & security** (`supabase/migrations/0006_check_ins.sql`):
@@ -168,6 +200,39 @@ publicly — think Swarm, focused on Singapore food.
 - Server-side validation on every field, incl. a Singapore coordinate bounding box.
 - `scripts/e2e-checkins.mjs` proves the full RLS path end-to-end (owner insert, forged-insert
   denial, public read, cross-user delete denial, owner delete) against the live database.
+
+### Smart check-in (auto-populated venues, free)
+
+When you drop a check-in pin, the form calls `GET /api/venues/nearby?lat=&lng=`
+(`lib/venues/nearby.ts`) which merges three **key-free** sources, ranked by distance:
+
+1. **Curated venues** — the bundled 343 SG + JB food spots (`lib/food/*`), richest metadata.
+2. **OpenStreetMap Overpass** — live nearby POIs (`amenity=restaurant|cafe|fast_food|food_court|
+   bar|pub|ice_cream` within ~200 m), with OSM `cuisine` tags mapped onto the app's `CuisineType`.
+3. **Nominatim reverse-geocode** — fills the *area* field from the coordinate's neighbourhood.
+
+Results are deduped by name and cached server-side by rounded lat/lng to respect the free
+services' rate limits. No Google Places key, no billing.
+
+### Profiles & friends
+
+- **Profiles** (`/profile`, public `/u/[id]`): avatar, display name, `@username`, bio, level
+  title + progress, points, rank and quick stats, with **Timeline · Badges · Friends** tabs.
+- **Avatars** upload to the `avatars` Storage bucket (owner-write to a `{uid}/` prefix,
+  public-read) via a Server Action with server-side type/size validation.
+- **Timeline** (`components/timeline`): your full check-in history grouped Today / Yesterday /
+  This week / by month on a vertical rail — venue, rating, note, area, time, Open-in-Maps.
+- **Friends**: request → accept graph (`friendships`). Search people by name/`@username`,
+  send/accept/cancel/remove, and scope the feed, map and leaderboard to **friends only**.
+  Friendship rows are RLS-visible only to the two parties.
+
+### Celebrations (make it feel alive)
+
+A lightweight `ToastProvider` + `CelebrationModal` (`components/feedback`, CSS confetti, no heavy
+deps) fire on meaningful moments. `createCheckIn` recomputes stats, diffs them against the
+persisted `user_badges`, and returns a **reward delta** (`lib/rewards/delta.ts`): points gained,
+newly-crossed badges, a level-up, or a streak milestone (3/7/30/100). Each badge is persisted so
+it celebrates **exactly once**, even across sessions.
 
 ### Data ingestion (scaffold)
 
@@ -187,8 +252,11 @@ Turns daily check-ins into a game — entirely **derived from `check_ins`**, no 
 - **Points & levels** — `points = check_ins×10 + distinctVenues×15 + distinctDays×5`, rolled into
   food-explorer levels (🌱 Newbie → 👑 Legend).
 - **Badges** — ~11 unlockable stickers (first check-in, 7-day streak, area explorer, cuisine
-  variety, "Regular Here", Centurion…).
-- **Leaderboard** — public ranking with the signed-in user pinned even when outside the top.
+  variety, "Regular Here", Centurion…), persisted in `user_badges` for once-only celebrations.
+- **Weekly quests** (`lib/rewards/quests.ts`) — rotating goals (streak keeper, flavour tour,
+  neighbourhood hop, honest critic) computed per ISO week from the user's rows, with progress bars.
+- **Leaderboard** — **Global** + **Friends** scopes, showing each player's avatar and level emoji
+  and linking to their profile; the signed-in user is pinned even when outside the global top.
 
 The engine lives in `lib/rewards/` (pure, unit-tested, client-safe). Personal stats are computed
 in JS from the user's own rows; the leaderboard reads one aggregate view,
@@ -242,19 +310,26 @@ promotions whose `end_date` has passed. History is preserved; the frontend only 
 
 ## Deployment
 
-### Vercel (recommended)
+### Cloudflare Pages (live)
 
-1. Push to GitHub and import the repo into Vercel.
-2. Add the env vars from `.env.example` in **Project → Settings → Environment Variables**
-   (set `NEXT_PUBLIC_SITE_URL` to your production URL).
-3. Deploy. `npm run build` generates the service worker automatically.
-4. **Daily expiry cron** — add to `vercel.json`:
-   ```json
-   { "crons": [{ "path": "/api/cron/expire", "schedule": "0 0 * * *" }] }
+Deployed at **https://promosg.pages.dev** via OpenNext + Wrangler.
+
+1. Put `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in `.env.local`.
+2. Set the runtime secrets on the Pages project once (`node scripts/set-pages-secrets.mjs`):
+   Supabase keys, `OPENROUTER_API_KEY`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`.
+3. Build + deploy:
+   ```bash
+   node scripts/deploy-pages.mjs      # opennextjs-cloudflare build → wrangler pages deploy
    ```
-   and set `CRON_SECRET`; Vercel sends it as the `Authorization: Bearer` header.
+   `npm run build` generates the service worker automatically as part of the build.
 
-### Supabase scheduled job (alternative)
+### Vercel (alternative)
+
+Import the repo, add the env vars from `.env.example`, deploy. For the daily expiry cron add
+`{ "crons": [{ "path": "/api/cron/expire", "schedule": "0 0 * * *" }] }` to `vercel.json` and set
+`CRON_SECRET` (sent as the `Authorization: Bearer` header).
+
+### Supabase scheduled job (alternative cron)
 
 Use `pg_cron` + `pg_net` to `POST` to `/api/cron/expire` daily with the
 `Authorization: Bearer <CRON_SECRET>` header.
@@ -264,18 +339,23 @@ Use `pg_cron` + `pg_net` to `POST` to `/api/cron/expire` daily with the
 ## Testing
 
 ```bash
-npm run test       # 31 unit tests
+npm run test                                          # unit tests (Vitest)
+node --env-file=.env.local scripts/e2e-checkins.mjs   # check-ins RLS, live DB
+node --env-file=.env.local scripts/e2e-social.mjs     # profiles/friends/badges/leaderboard/Storage RLS, live DB
 ```
 
-Covers the calendar date math and day-grouping engine, category metadata, search-param
-parse/serialize round-trips, date formatting, and the ingestion extractor + dedupe pipeline.
+Unit tests cover the calendar date math and day-grouping engine, category metadata,
+search-param round-trips, date formatting, the rewards compute engine, and the ingestion
+extractor + dedupe pipeline. The two E2E scripts assert the actual Row Level Security policies,
+views and Storage rules end-to-end against the live database (creating and cleaning up
+throwaway users).
 
 ---
 
 ## Roadmap (next pass)
 
 - Live source adapters (Telegram / RSS / scraping) + LLM extraction behind `PromotionExtractor`
-- Web-push delivery + notification triggers
+- Web-push delivery + notification triggers (streak reminders, friend activity)
 - Community Spots: rate-limiting on check-in creation + a report/moderation flow before scaling
-- Photo uploads for check-ins (Supabase Storage) + friends / social graph
+- Photo uploads on check-ins (Supabase Storage) + a friend activity feed
 - Admin panel (approve / edit / manage sources / view ingestion logs)

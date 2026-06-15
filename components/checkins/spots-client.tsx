@@ -7,21 +7,26 @@ import { CheckInCard } from "@/components/checkins/check-in-card";
 import { cn } from "@/lib/utils";
 import type { CheckIn } from "@/lib/checkins/types";
 
-type Filter = "all" | "mine";
+type Filter = "all" | "friends" | "mine";
 
 export function SpotsClient({
   checkIns,
   currentUserId,
+  friendIds = [],
 }: {
   checkIns: CheckIn[];
   currentUserId: string | null;
+  friendIds?: string[];
 }) {
   const [filter, setFilter] = React.useState<Filter>("all");
+  const friendSet = React.useMemo(() => new Set(friendIds), [friendIds]);
 
-  const visible = React.useMemo(
-    () => (filter === "mine" ? checkIns.filter((c) => c.userId === currentUserId) : checkIns),
-    [filter, checkIns, currentUserId],
-  );
+  const visible = React.useMemo(() => {
+    if (filter === "mine") return checkIns.filter((c) => c.userId === currentUserId);
+    if (filter === "friends")
+      return checkIns.filter((c) => friendSet.has(c.userId) || c.userId === currentUserId);
+    return checkIns;
+  }, [filter, checkIns, currentUserId, friendSet]);
 
   return (
     <div className="space-y-6 pb-4">
@@ -49,7 +54,7 @@ export function SpotsClient({
       {/* Filter toggle */}
       {currentUserId && (
         <div className="flex gap-2">
-          {(["all", "mine"] as Filter[]).map((f) => (
+          {(["all", "friends", "mine"] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"
@@ -61,7 +66,7 @@ export function SpotsClient({
                   : "border-border bg-background text-muted-foreground hover:border-foreground/30",
               )}
             >
-              {f === "all" ? "All check-ins" : "My check-ins"}
+              {f === "all" ? "All check-ins" : f === "friends" ? "Friends" : "My check-ins"}
             </button>
           ))}
         </div>
@@ -71,7 +76,9 @@ export function SpotsClient({
         <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           {filter === "mine"
             ? "You haven't checked in anywhere yet — tap Check in to start your food history."
-            : "No check-ins yet. Be the first to share a spot!"}
+            : filter === "friends"
+              ? "No check-ins from your friends yet — add friends from their profile to see their spots here."
+              : "No check-ins yet. Be the first to share a spot!"}
         </div>
       ) : (
         <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { InstallPrompt } from "@/components/layout/install-prompt";
 import { CheckInFab } from "@/components/checkins/check-in-fab";
+import { ToastProvider } from "@/components/feedback/toast-provider";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -48,13 +49,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-dvh font-sans antialiased">
-        <TopBar />
-        <main className="container max-w-5xl pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-4 md:pb-10">
-          {children}
-        </main>
-        <BottomNav />
-        <CheckInFab />
-        <InstallPrompt />
+        <ToastProvider>
+          <TopBar />
+          <main className="container max-w-5xl pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-4 md:pb-10">
+            {children}
+          </main>
+          <BottomNav />
+          <CheckInFab />
+          <InstallPrompt />
+        </ToastProvider>
       </body>
     </html>
   );

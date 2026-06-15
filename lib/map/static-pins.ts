@@ -16,6 +16,8 @@ export interface StaticPin {
   tag: string;
   /** Country code for map filter chip — "SG" | "MY" */
   country?: string;
+  /** Owner of a community check-in (spot pins only) — for the Friends filter. */
+  userId?: string;
 }
 
 import type { FoodSpot } from "@/lib/food/spots";
@@ -57,6 +59,7 @@ export function checkInToPin(c: CheckIn): StaticPin {
     description: c.note ?? `Checked in by ${c.authorName}`,
     mapsUrl: `https://www.google.com/maps/search/?api=1&query=${c.latitude},${c.longitude}`,
     tag: meta?.label ?? "Community spot",
+    userId: c.userId,
   };
 }
 

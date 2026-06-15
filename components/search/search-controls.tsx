@@ -138,22 +138,26 @@ export function SearchControls({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="from">From</Label>
                 <Input
                   id="from"
                   type="date"
                   value={from}
+                  max={to || undefined}
                   onChange={(e) => setFrom(e.target.value)}
+                  className="w-full min-w-0 appearance-none"
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="to">To</Label>
                 <Input
                   id="to"
                   type="date"
                   value={to}
+                  min={from || undefined}
                   onChange={(e) => setTo(e.target.value)}
+                  className="w-full min-w-0 appearance-none"
                 />
               </div>
             </div>

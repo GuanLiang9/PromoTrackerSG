@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { MapRoot } from "@/components/map/map-root";
 import { SetupNotice } from "@/components/layout/setup-notice";
 import { getPromotionsWithCoords } from "@/lib/promotions/queries";
-import { getCheckInsWithCoords } from "@/lib/checkins/queries";
+import { getCheckInsWithCoords, getCurrentUserId } from "@/lib/checkins/queries";
+import { getAcceptedFriendIds } from "@/lib/friends/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FOOD_SPOTS } from "@/lib/food/spots";
 import { JB_FOOD_SPOTS } from "@/lib/food/jb-spots";
@@ -28,10 +29,12 @@ export default async function MapPage({
     return <SetupNotice />;
   }
 
-  const [promotions, checkIns] = await Promise.all([
+  const [promotions, checkIns, currentUserId] = await Promise.all([
     getPromotionsWithCoords(),
     getCheckInsWithCoords(),
+    getCurrentUserId(),
   ]);
+  const friendIds = currentUserId ? await getAcceptedFriendIds(currentUserId) : [];
   const spotPins = checkIns.map(checkInToPin);
 
   return (
@@ -40,6 +43,8 @@ export default async function MapPage({
       foodPins={foodPins}
       gemPins={gemPins}
       spotPins={spotPins}
+      currentUserId={currentUserId}
+      friendIds={friendIds}
       focusId={id ?? null}
     />
   );

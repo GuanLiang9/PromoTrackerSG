@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { computeStats, type CheckInStatRow } from "@/lib/rewards/compute";
+import { computeRewardDelta, type RewardDelta } from "@/lib/rewards/delta";
 
 export interface CheckInInput {
   venueName: string;
@@ -17,6 +19,7 @@ export interface CheckInInput {
 export interface CheckInResult {
   ok: boolean;
   error?: string;
+  reward?: RewardDelta;
 }
 
 // Singapore bounding box (generous) — rejects coords from elsewhere.
@@ -58,6 +61,21 @@ export async function createCheckIn(input: CheckInInput): Promise<CheckInResult>
   const cuisine = clampStr(input.cuisine, 30) || null;
   const area = clampStr(input.area, 80) || null;
 
+  // Snapshot stats BEFORE the insert so we can detect what this check-in unlocks.
+  const { data: prevRows } = await supabase
+    .from("check_ins")
+    .select("created_at, venue_name, area, cuisine, rating")
+    .eq("user_id", user.id);
+  const prevStats = computeStats((prevRows ?? []) as CheckInStatRow[]);
+
+  const newRow = {
+    created_at: new Date().toISOString(),
+    venue_name: venueName,
+    area,
+    cuisine,
+    rating,
+  } satisfies CheckInStatRow;
+
   const { error } = await supabase.from("check_ins").insert({
     user_id: user.id, // from session — never trust the client (audit §4.2)
     author_name: authorName,
@@ -71,10 +89,44 @@ export async function createCheckIn(input: CheckInInput): Promise<CheckInResult>
   });
   if (error) return { ok: false, error: error.message };
 
+  // Compute the reward delta and persist newly earned badges.
+  const reward = await applyRewards(supabase, user.id, prevStats, [
+    ...((prevRows ?? []) as CheckInStatRow[]),
+    newRow,
+  ]);
+
   revalidatePath("/spots");
   revalidatePath("/map");
   revalidatePath("/dashboard");
-  return { ok: true };
+  revalidatePath("/rewards");
+  revalidatePath("/profile");
+  return { ok: true, reward };
+}
+
+/** Persists newly earned badges and returns the celebration payload. */
+async function applyRewards(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  prevStats: ReturnType<typeof computeStats>,
+  allRows: CheckInStatRow[],
+): Promise<RewardDelta> {
+  const nextStats = computeStats(allRows);
+  const { data: badgeRows } = await supabase
+    .from("user_badges")
+    .select("badge_id")
+    .eq("user_id", userId);
+  const persisted = new Set((badgeRows ?? []).map((b: { badge_id: string }) => b.badge_id));
+
+  const { delta, badgeIdsToInsert } = computeRewardDelta(prevStats, nextStats, persisted);
+  if (badgeIdsToInsert.length) {
+    await supabase
+      .from("user_badges")
+      .upsert(
+        badgeIdsToInsert.map((badge_id) => ({ user_id: userId, badge_id })),
+        { onConflict: "user_id,badge_id", ignoreDuplicates: true },
+      );
+  }
+  return delta;
 }
 
 /** Deletes the user's own check-in (RLS enforces ownership). */

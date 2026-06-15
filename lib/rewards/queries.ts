@@ -1,12 +1,14 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getAcceptedFriendIds } from "@/lib/friends/queries";
 import type { CheckInStatRow } from "@/lib/rewards/compute";
 
 /** A row of the public leaderboard (mirrors the user_check_in_stats view). */
 export interface LeaderboardRow {
   user_id: string;
   author_name: string | null;
+  avatar_url: string | null;
   check_ins: number;
   venues: number;
   days: number;
@@ -35,6 +37,21 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardRow[]> {
     .select("*")
     .order("points", { ascending: false })
     .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as LeaderboardRow[];
+}
+
+/** Leaderboard scoped to the user + their accepted friends, by points. */
+export async function getFriendsLeaderboard(userId: string): Promise<LeaderboardRow[]> {
+  if (!isSupabaseConfigured) return [];
+  const friendIds = await getAcceptedFriendIds(userId);
+  const ids = [userId, ...friendIds];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_check_in_stats")
+    .select("*")
+    .in("user_id", ids)
+    .order("points", { ascending: false });
   if (error) throw error;
   return (data ?? []) as LeaderboardRow[];
 }

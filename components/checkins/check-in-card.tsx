@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { ExternalLink, MapPin, Star, Trash2, User } from "lucide-react";
 import { CUISINE_META } from "@/lib/food/spots";
@@ -81,10 +82,13 @@ export function CheckInCard({
 
         {/* Footer: author + time */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-1 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
+          <Link
+            href={`/u/${checkIn.userId}`}
+            className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+          >
             <User className="h-3 w-3" />
             <span className="line-clamp-1">{checkIn.authorName}</span>
-          </span>
+          </Link>
           <span className="shrink-0">
             {formatDistanceToNow(new Date(checkIn.createdAt), { addSuffix: true })}
           </span>

@@ -7,22 +7,32 @@ import { cn } from "@/lib/utils";
 import type { RewardStats } from "@/lib/rewards/compute";
 import { evaluateBadges } from "@/lib/rewards/badges";
 import { levelFor } from "@/lib/rewards/levels";
+import type { Quest } from "@/lib/rewards/quests";
 import type { LeaderboardRow } from "@/lib/rewards/queries";
+import { Avatar } from "@/components/profile/avatar";
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+type LbScope = "global" | "friends";
 
 export function RewardsClient({
   personal,
   rank,
   leaderboard,
+  friendsLeaderboard = [],
+  quests = [],
   currentUserId,
 }: {
   personal: RewardStats | null;
   rank: number | null;
   leaderboard: LeaderboardRow[];
+  friendsLeaderboard?: LeaderboardRow[];
+  quests?: Quest[];
   currentUserId: string | null;
 }) {
-  const inTop = leaderboard.some((r) => r.user_id === currentUserId);
+  const [scope, setScope] = React.useState<LbScope>("global");
+  const activeBoard = scope === "friends" ? friendsLeaderboard : leaderboard;
+  const inTop = activeBoard.some((r) => r.user_id === currentUserId);
 
   return (
     <div className="space-y-6 pb-4">
@@ -45,20 +55,44 @@ export function RewardsClient({
         <SignedOutPanel />
       )}
 
+      {/* Weekly quests */}
+      {personal && quests.length > 0 && <QuestsCard quests={quests} />}
+
       {/* Leaderboard */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-brand" />
-          <h2 className="text-base font-semibold tracking-tight">Leaderboard</h2>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-brand" />
+            <h2 className="text-base font-semibold tracking-tight">Leaderboard</h2>
+          </div>
+          {currentUserId && (
+            <div className="flex gap-1 rounded-full border bg-muted/40 p-0.5">
+              {(["global", "friends"] as LbScope[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setScope(s)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                    scope === s ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {s === "global" ? "Global" : "Friends"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {leaderboard.length === 0 ? (
+        {activeBoard.length === 0 ? (
           <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-            No check-ins yet — be the first to top the board.
+            {scope === "friends"
+              ? "Add friends to see how you stack up against them."
+              : "No check-ins yet — be the first to top the board."}
           </div>
         ) : (
           <ol className="overflow-hidden rounded-2xl border bg-card">
-            {leaderboard.map((row, i) => (
+            {activeBoard.map((row, i) => (
               <LeaderRow
                 key={row.user_id}
                 row={row}
@@ -69,13 +103,14 @@ export function RewardsClient({
           </ol>
         )}
 
-        {/* Pinned "you" row when outside the visible list */}
-        {personal && rank && !inTop && (
+        {/* Pinned "you" row when outside the visible global list */}
+        {scope === "global" && personal && rank && !inTop && (
           <ol className="overflow-hidden rounded-2xl border border-brand/40 bg-card">
             <LeaderRow
               row={{
                 user_id: currentUserId!,
                 author_name: "You",
+                avatar_url: null,
                 check_ins: personal.checkIns,
                 venues: personal.venues,
                 days: personal.days,
@@ -89,6 +124,55 @@ export function RewardsClient({
         )}
       </section>
     </div>
+  );
+}
+
+function QuestsCard({ quests }: { quests: Quest[] }) {
+  const done = quests.filter((q) => q.completed).length;
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold tracking-tight">Weekly quests</h2>
+        <span className="text-xs text-muted-foreground">{done}/{quests.length} done</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {quests.map((q) => {
+          const pct = Math.round((q.current / q.target) * 100);
+          return (
+            <div
+              key={q.id}
+              className={cn(
+                "rounded-2xl border p-4 transition-all",
+                q.completed ? "border-brand/40 bg-brand/5" : "bg-card",
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{q.emoji}</span>
+                  <div>
+                    <p className="text-sm font-semibold leading-tight">{q.title}</p>
+                    <p className="text-[11px] text-muted-foreground">{q.description}</p>
+                  </div>
+                </div>
+                {q.completed && <span className="text-sm">✅</span>}
+              </div>
+              <div className="mt-3 space-y-1">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand to-emerald-400 transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{q.current}/{q.target}</span>
+                  <span>{q.reward}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -267,23 +351,28 @@ function LeaderRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 border-b px-4 py-3 last:border-b-0",
+        "flex items-center gap-3 border-b px-4 py-3 last:border-b-0 transition-colors hover:bg-accent/50",
         isMe && "bg-brand/5",
       )}
     >
-      <span className="w-7 shrink-0 text-center text-sm font-bold text-muted-foreground">
+      <span className="w-6 shrink-0 text-center text-sm font-bold text-muted-foreground">
         {medal ?? position}
       </span>
-      <span className="text-lg">{level.emoji}</span>
-      <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-sm font-semibold">
-          {row.author_name || "Foodie"}
-          {isMe && <span className="ml-1.5 text-[10px] font-bold text-brand">YOU</span>}
-        </p>
-        <p className="text-[11px] text-muted-foreground">
-          {row.check_ins} check-in{row.check_ins === 1 ? "" : "s"} · {row.venues} places
-        </p>
-      </div>
+      <Link href={`/u/${row.user_id}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="relative shrink-0">
+          <Avatar src={row.avatar_url} name={row.author_name} size="sm" />
+          <span className="absolute -bottom-1 -right-1 text-xs">{level.emoji}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-1 text-sm font-semibold">
+            {row.author_name || "Foodie"}
+            {isMe && <span className="ml-1.5 text-[10px] font-bold text-brand">YOU</span>}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {row.check_ins} check-in{row.check_ins === 1 ? "" : "s"} · {row.venues} places
+          </p>
+        </div>
+      </Link>
       <span className="shrink-0 text-sm font-bold tabular-nums">
         {row.points.toLocaleString("en-SG")}
       </span>

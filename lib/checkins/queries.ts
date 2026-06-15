@@ -31,6 +31,21 @@ export async function getCheckInsWithCoords(limit = 500): Promise<CheckIn[]> {
   return (data as CheckInRow[]).map(mapRowToCheckIn);
 }
 
+/** All of one user's check-ins, newest first — for their profile timeline. */
+export async function getUserCheckIns(userId: string, limit = 200): Promise<CheckIn[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("check_ins")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data as CheckInRow[]).map(mapRowToCheckIn);
+}
+
 /** Current user id, or null when signed out. */
 export async function getCurrentUserId(): Promise<string | null> {
   if (!isSupabaseConfigured) return null;

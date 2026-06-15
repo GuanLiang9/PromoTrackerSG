@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -77,6 +77,9 @@ export function AccountMenu() {
           </p>
           <p className="truncate text-sm font-medium">{email}</p>
         </div>
+        <DropdownMenuItem onSelect={() => router.push("/profile")}>
+          <User className="h-4 w-4" /> My profile
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => router.push("/interests")}>
           My interests
         </DropdownMenuItem>
