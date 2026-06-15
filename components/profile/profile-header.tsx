@@ -7,11 +7,14 @@ export function ProfileHeader({
   stats,
   rank,
   action,
+  avatar,
 }: {
   profile: PublicProfile;
   stats: RewardStats | null;
   rank: number | null;
   action?: React.ReactNode;
+  /** Override the avatar (e.g. an editable, tappable avatar on your own profile). */
+  avatar?: React.ReactNode;
 }) {
   const name = displayNameOf(profile);
 
@@ -22,7 +25,7 @@ export function ProfileHeader({
 
       <div className="relative space-y-4">
         <div className="flex items-start gap-4">
-          <Avatar src={profile.avatarUrl} name={name} size="xl" />
+          {avatar ?? <Avatar src={profile.avatarUrl} name={name} size="xl" />}
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">{name}</h1>
             {profile.username && (

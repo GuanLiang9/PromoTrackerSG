@@ -13,12 +13,19 @@ import {
 import { Avatar } from "@/components/profile/avatar";
 import { updateProfile, uploadAvatar } from "@/lib/profiles/actions";
 import { useToast } from "@/components/feedback/toast-provider";
-import type { PublicProfile } from "@/lib/profiles/types";
+import { displayNameOf, type PublicProfile } from "@/lib/profiles/types";
 
 const inputCls =
   "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/30 focus:ring-2 focus:ring-ring";
 
-export function EditProfileButton({ profile }: { profile: PublicProfile }) {
+/** The profile editor, opened by any trigger element passed as children. */
+export function ProfileEditSheet({
+  profile,
+  children,
+}: {
+  profile: PublicProfile;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
@@ -65,11 +72,7 @@ export function EditProfileButton({ profile }: { profile: PublicProfile }) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-xl border bg-background px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-accent">
-          <Pencil className="h-4 w-4" /> Edit profile
-        </button>
-      </SheetTrigger>
+      <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Edit profile</SheetTitle>
@@ -164,5 +167,35 @@ export function EditProfileButton({ profile }: { profile: PublicProfile }) {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** The "Edit profile" button used in the profile header action slot. */
+export function EditProfileButton({ profile }: { profile: PublicProfile }) {
+  return (
+    <ProfileEditSheet profile={profile}>
+      <button className="inline-flex items-center gap-1.5 rounded-xl border bg-background px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-accent">
+        <Pencil className="h-4 w-4" /> Edit profile
+      </button>
+    </ProfileEditSheet>
+  );
+}
+
+/** Tappable avatar (with a camera badge) that opens the editor — the intuitive
+ *  "tap my photo to change it" affordance. Used on your own profile only. */
+export function EditableAvatar({ profile }: { profile: PublicProfile }) {
+  return (
+    <ProfileEditSheet profile={profile}>
+      <button
+        type="button"
+        className="relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Edit profile photo"
+      >
+        <Avatar src={profile.avatarUrl} name={displayNameOf(profile)} size="xl" />
+        <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-foreground text-background shadow-sm">
+          <Camera className="h-3.5 w-3.5" />
+        </span>
+      </button>
+    </ProfileEditSheet>
   );
 }

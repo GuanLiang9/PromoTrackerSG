@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SetupNotice } from "@/components/layout/setup-notice";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileTabs } from "@/components/profile/profile-tabs";
-import { EditProfileButton } from "@/components/profile/edit-profile-sheet";
+import { EditProfileButton, EditableAvatar } from "@/components/profile/edit-profile-sheet";
 import { CheckInTimeline } from "@/components/timeline/checkin-timeline";
 import { BadgesGrid } from "@/components/rewards/badges-grid";
 import { FriendsTab } from "@/components/friends/friends-tab";
@@ -48,6 +48,7 @@ export default async function ProfilePage() {
         profile={profile}
         stats={stats}
         rank={rank}
+        avatar={<EditableAvatar profile={profile} />}
         action={<EditProfileButton profile={profile} />}
       />
 
