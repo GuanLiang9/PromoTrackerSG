@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { LogIn, LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,24 +15,36 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export function AccountMenu() {
   const router = useRouter();
+  const pathname = usePathname();
   const [email, setEmail] = React.useState<string | null>(null);
   const [ready, setReady] = React.useState(false);
 
+  // Re-check on every navigation: a server-action login is a soft navigation
+  // that neither remounts this component nor fires onAuthStateChange on the
+  // browser client, so without this the menu would stay "Sign in" until a full
+  // reload. getSession() reads the cookie locally (no network, no token
+  // validation needed for a UI toggle). `ready` only flips once, so navigating
+  // never reflashes the loading skeleton.
   React.useEffect(() => {
     if (!isSupabaseConfigured) {
       setReady(true);
       return;
     }
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null);
-      setReady(true);
-    });
+    let active = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => { if (active) setEmail(data.session?.user?.email ?? null); })
+      .catch(() => { if (active) setEmail(null); })
+      .finally(() => { if (active) setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setEmail(session?.user?.email ?? null);
+      if (active) setEmail(session?.user?.email ?? null);
     });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [pathname]);
 
   async function handleSignOut() {
     const supabase = createClient();

@@ -19,21 +19,28 @@ export function RewardsButton() {
     if (!isSupabaseConfigured) return;
     const supabase = createClient();
 
-    async function load() {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
+    async function loadFor(userId: string | null) {
+      if (!userId) {
         setStreak(null);
         return;
       }
       const { data } = await supabase
         .from("check_ins")
         .select("created_at, venue_name, area, cuisine, rating")
-        .eq("user_id", auth.user.id);
+        .eq("user_id", userId);
       setStreak(computeStats(data ?? []).currentStreak);
     }
 
-    load();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => load());
+    // Initial read happens OUTSIDE the auth callback. Any Supabase call inside
+    // onAuthStateChange — even a data query (it needs the access token, which
+    // awaits initialize()) — deadlocks the client's initialize(). So read the
+    // session from the event arg and defer the actual work with setTimeout(0),
+    // letting initialize() finish first.
+    supabase.auth.getUser().then(({ data }) => loadFor(data.user?.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      const userId = session?.user?.id ?? null;
+      setTimeout(() => loadFor(userId), 0);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
