@@ -13,11 +13,12 @@ function clampStr(v: unknown, max: number): string {
   return String(v ?? "").trim().slice(0, max);
 }
 
-/** Update the signed-in user's profile (display name, bio, username). */
+/** Update the signed-in user's profile (display name, bio, username, visibility). */
 export async function updateProfile(input: {
   displayName: string;
   bio?: string;
   username?: string;
+  isPublic?: boolean;
 }): Promise<ProfileActionResult> {
   const supabase = await createClient();
   const {
@@ -37,7 +38,7 @@ export async function updateProfile(input: {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName, bio, username })
+    .update({ display_name: displayName, bio, username, is_public: Boolean(input.isPublic) })
     .eq("id", user.id);
 
   if (error) {

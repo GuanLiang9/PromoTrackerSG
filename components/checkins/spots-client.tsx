@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { CheckInCard } from "@/components/checkins/check-in-card";
 import { cn } from "@/lib/utils";
 import type { CheckIn } from "@/lib/checkins/types";
+import type { AuthorInfo } from "@/lib/profiles/queries";
 
 type Filter = "all" | "friends" | "mine";
 
@@ -13,10 +14,12 @@ export function SpotsClient({
   checkIns,
   currentUserId,
   friendIds = [],
+  authors = {},
 }: {
   checkIns: CheckIn[];
   currentUserId: string | null;
   friendIds?: string[];
+  authors?: Record<string, AuthorInfo>;
 }) {
   const [filter, setFilter] = React.useState<Filter>("all");
   const friendSet = React.useMemo(() => new Set(friendIds), [friendIds]);
@@ -83,7 +86,12 @@ export function SpotsClient({
       ) : (
         <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((c) => (
-            <CheckInCard key={c.id} checkIn={c} isOwner={c.userId === currentUserId} />
+            <CheckInCard
+              key={c.id}
+              checkIn={c}
+              isOwner={c.userId === currentUserId}
+              author={authors[c.userId]}
+            />
           ))}
         </div>
       )}

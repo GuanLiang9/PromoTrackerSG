@@ -32,6 +32,7 @@ export function ProfileEditSheet({
   const [displayName, setDisplayName] = React.useState(profile.displayName ?? "");
   const [username, setUsername] = React.useState(profile.username ?? "");
   const [bio, setBio] = React.useState(profile.bio ?? "");
+  const [isPublic, setIsPublic] = React.useState(profile.isPublic);
   const [avatarUrl, setAvatarUrl] = React.useState(profile.avatarUrl ?? null);
   const [saving, setSaving] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
@@ -59,7 +60,7 @@ export function ProfileEditSheet({
   async function onSave() {
     setSaving(true);
     setError(null);
-    const res = await updateProfile({ displayName, username, bio });
+    const res = await updateProfile({ displayName, username, bio, isPublic });
     setSaving(false);
     if (!res.ok) {
       setError(res.error ?? "Could not save.");
@@ -150,6 +151,29 @@ export function ProfileEditSheet({
               placeholder="A little about your food taste…"
             />
           </div>
+
+          {/* Visibility */}
+          <button
+            type="button"
+            onClick={() => setIsPublic((v) => !v)}
+            className="flex w-full items-center justify-between gap-3 rounded-xl border bg-background px-3.5 py-3 text-left transition-colors hover:bg-accent"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Public profile</span>
+              <span className="block text-xs text-muted-foreground">
+                {isPublic
+                  ? "Anyone can see your check-ins."
+                  : "Only friends can see your check-ins."}
+              </span>
+            </span>
+            <span
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isPublic ? "bg-brand" : "bg-muted-foreground/30"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${isPublic ? "left-[1.375rem]" : "left-0.5"}`}
+              />
+            </span>
+          </button>
 
           {error && (
             <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>

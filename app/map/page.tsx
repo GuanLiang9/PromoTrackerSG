@@ -4,6 +4,7 @@ import { SetupNotice } from "@/components/layout/setup-notice";
 import { getPromotionsWithCoords } from "@/lib/promotions/queries";
 import { getCheckInsWithCoords, getCurrentUserId } from "@/lib/checkins/queries";
 import { getAcceptedFriendIds } from "@/lib/friends/queries";
+import { getAuthorsFor } from "@/lib/profiles/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FOOD_SPOTS } from "@/lib/food/spots";
 import { JB_FOOD_SPOTS } from "@/lib/food/jb-spots";
@@ -21,9 +22,9 @@ const gemPins = HIDDEN_GEMS.map(gemToPin);
 export default async function MapPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ id?: string; spot?: string }>;
 }) {
-  const { id } = await searchParams;
+  const { id, spot } = await searchParams;
 
   if (!isSupabaseConfigured) {
     return <SetupNotice />;
@@ -34,8 +35,11 @@ export default async function MapPage({
     getCheckInsWithCoords(),
     getCurrentUserId(),
   ]);
-  const friendIds = currentUserId ? await getAcceptedFriendIds(currentUserId) : [];
-  const spotPins = checkIns.map(checkInToPin);
+  const [friendIds, authors] = await Promise.all([
+    currentUserId ? getAcceptedFriendIds(currentUserId) : Promise.resolve([]),
+    getAuthorsFor(checkIns),
+  ]);
+  const spotPins = checkIns.map((c) => checkInToPin(c, authors[c.userId]));
 
   return (
     <MapRoot
@@ -46,6 +50,7 @@ export default async function MapPage({
       currentUserId={currentUserId}
       friendIds={friendIds}
       focusId={id ?? null}
+      focusSpotId={spot ?? null}
     />
   );
 }

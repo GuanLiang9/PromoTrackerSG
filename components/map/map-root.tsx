@@ -3,7 +3,9 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Crosshair, ExternalLink, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { Crosshair, ExternalLink, Pencil, Star, X } from "lucide-react";
+import { Avatar } from "@/components/profile/avatar";
 import { CATEGORIES, getCategoryMeta } from "@/lib/constants";
 import { formatDateRange } from "@/lib/format";
 import { haversineKm } from "@/lib/geo/distance";
@@ -43,6 +45,7 @@ export function MapRoot({
   currentUserId = null,
   friendIds = [],
   focusId,
+  focusSpotId,
 }: {
   promotions: Promotion[];
   foodPins: StaticPin[];
@@ -51,6 +54,7 @@ export function MapRoot({
   currentUserId?: string | null;
   friendIds?: string[];
   focusId?: string | null;
+  focusSpotId?: string | null;
 }) {
   const [layer, setLayer] = React.useState<MapLayer>("deals");
   const [countryFilter, setCountryFilter] = React.useState<"all" | "SG" | "MY">("all");
@@ -62,13 +66,23 @@ export function MapRoot({
   const [flyTarget, setFlyTarget] = React.useState<FlyTarget | null>(null);
   const [userPos, setUserPos] = React.useState<{ lat: number; lng: number } | null>(null);
 
-  // Deep-link focus on mount
+  // Deep-link focus on mount — a promotion (?id=) or a community check-in (?spot=).
   React.useEffect(() => {
-    if (!focusId) return;
-    const p = promotions.find((x) => x.id === focusId);
-    if (p?.latitude != null && p.longitude != null) {
-      setSelected(p);
-      setFlyTarget({ lat: p.latitude, lng: p.longitude, zoom: 16, nonce: Date.now() });
+    if (focusSpotId) {
+      const pin = spotPins.find((x) => x.id === `spot-${focusSpotId}`);
+      if (pin) {
+        setLayer("spots");
+        setSelectedPin(pin);
+        setFlyTarget({ lat: pin.lat, lng: pin.lng, zoom: 17, nonce: Date.now() });
+        return;
+      }
+    }
+    if (focusId) {
+      const p = promotions.find((x) => x.id === focusId);
+      if (p?.latitude != null && p.longitude != null) {
+        setSelected(p);
+        setFlyTarget({ lat: p.latitude, lng: p.longitude, zoom: 16, nonce: Date.now() });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -184,7 +198,7 @@ export function MapRoot({
       {/* Floating top overlay */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] space-y-2 p-3">
         {/* Layer tabs */}
-        <div className="pointer-events-auto flex gap-1.5 rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-lg backdrop-blur-xl">
+        <div className="pointer-events-auto flex w-full gap-1 rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-lg backdrop-blur-xl">
           {LAYER_TABS.map((t) => {
             const count =
               t.value === "deals"
@@ -201,15 +215,18 @@ export function MapRoot({
                 type="button"
                 onClick={() => switchLayer(t.value)}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-xs font-semibold transition-all sm:px-2.5",
                   active ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-600 hover:bg-zinc-100",
                 )}
               >
-                <span>{t.emoji} {t.label}</span>
+                <span className="truncate">
+                  <span aria-hidden>{t.emoji}</span>
+                  <span className="ml-1 hidden min-[360px]:inline">{t.label}</span>
+                </span>
                 {count > 0 && (
                   <span
                     className={cn(
-                      "rounded-full px-1.5 text-[10px] font-bold leading-4",
+                      "shrink-0 rounded-full px-1.5 text-[10px] font-bold leading-4",
                       active ? "bg-white/25 text-white" : "bg-zinc-900/10 text-zinc-700",
                     )}
                   >
@@ -223,14 +240,14 @@ export function MapRoot({
 
         {/* Country filter chips (food layer only) */}
         {layer === "food" && (
-          <div className="pointer-events-auto flex gap-2 rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
+          <div className="pointer-events-auto flex w-full gap-1.5 rounded-xl border border-white/40 bg-white/70 p-1.5 shadow backdrop-blur-xl">
             {(["all", "SG", "MY"] as const).map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => switchCountry(c)}
                 className={cn(
-                  "flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors",
                   countryFilter === c
                     ? "bg-zinc-900 text-white shadow-sm"
                     : "text-zinc-600 hover:bg-zinc-100",
@@ -244,7 +261,7 @@ export function MapRoot({
 
         {/* Spots scope chips (spots layer only, signed-in) */}
         {layer === "spots" && currentUserId && (
-          <div className="pointer-events-auto flex gap-2 rounded-xl border border-white/40 bg-white/70 p-2 shadow backdrop-blur-xl">
+          <div className="pointer-events-auto flex w-full gap-1.5 rounded-xl border border-white/40 bg-white/70 p-1.5 shadow backdrop-blur-xl">
             {(["all", "friends", "mine"] as const).map((s) => (
               <button
                 key={s}
@@ -254,7 +271,7 @@ export function MapRoot({
                   setSelectedPin(null);
                 }}
                 className={cn(
-                  "flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors",
                   spotScope === s
                     ? "bg-zinc-900 text-white shadow-sm"
                     : "text-zinc-600 hover:bg-zinc-100",
@@ -416,26 +433,69 @@ export function MapRoot({
                 {selectedPin.emoji}
               </div>
               <div className="min-w-0 flex-1 space-y-1 pr-8">
-                <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
-                  {selectedPin.tag}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                    {selectedPin.tag}
+                  </span>
+                  {selectedPin.layer === "spot" && selectedPin.rating != null && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                      {selectedPin.rating}/5
+                    </span>
+                  )}
+                </div>
                 <p className="line-clamp-1 text-sm font-semibold text-zinc-900">{selectedPin.name}</p>
                 <p className="text-xs text-zinc-500">
                   {selectedPin.area}
                   {selectedDistance != null &&
                     ` · ${selectedDistance < 1 ? `${Math.round(selectedDistance * 1000)} m` : `${selectedDistance.toFixed(1)} km`} away`}
                 </p>
-                <p className="line-clamp-1 text-xs text-zinc-400">{selectedPin.description}</p>
+                {selectedPin.layer === "spot" ? (
+                  selectedPin.note && (
+                    <p className="line-clamp-2 text-xs text-zinc-600">{selectedPin.note}</p>
+                  )
+                ) : (
+                  <p className="line-clamp-1 text-xs text-zinc-400">{selectedPin.description}</p>
+                )}
+                {selectedPin.layer === "spot" && selectedPin.authorName && (
+                  <Link
+                    href={`/u/${selectedPin.userId}`}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-zinc-500 transition-colors hover:text-zinc-800"
+                  >
+                    <Avatar
+                      src={selectedPin.avatarUrl}
+                      name={selectedPin.authorName}
+                      size="sm"
+                      className="h-4 w-4 text-[8px]"
+                    />
+                    <span className="line-clamp-1">{selectedPin.authorName}</span>
+                    {selectedPin.createdAt && (
+                      <span className="text-zinc-400">
+                        · {formatDistanceToNow(new Date(selectedPin.createdAt), { addSuffix: true })}
+                      </span>
+                    )}
+                  </Link>
+                )}
               </div>
             </div>
-            <a
-              href={selectedPin.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 border-t border-zinc-100 px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Open in Maps
-            </a>
+            <div className="flex items-stretch border-t border-zinc-100 text-xs font-semibold text-zinc-700">
+              {selectedPin.layer === "spot" && selectedPin.userId === currentUserId && (
+                <Link
+                  href={`/check-in/${selectedPin.id.replace(/^spot-/, "")}/edit`}
+                  className="flex flex-1 items-center justify-center gap-1.5 border-r border-zinc-100 px-4 py-2.5 hover:bg-zinc-50"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Link>
+              )}
+              <a
+                href={selectedPin.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 hover:bg-zinc-50"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Open in Maps
+              </a>
+            </div>
           </div>
         </div>
       )}

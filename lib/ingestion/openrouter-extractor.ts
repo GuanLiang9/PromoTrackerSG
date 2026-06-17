@@ -119,6 +119,11 @@ export class OpenRouterExtractor implements PromotionExtractor {
       "Return ONLY a JSON object, no prose. " +
       `Today is ${today}. Resolve relative dates against it; assume the current ` +
       "year if a year is omitted. Dates must be YYYY-MM-DD or null. " +
+      "SINGLE-DAY RULE: if the offer or event runs on a single day (e.g. 'on June 14', " +
+      "'14 Jun only', 'this Saturday', 'today only'), set BOTH startDate and endDate to that " +
+      "same date. Only return an endDate later than startDate when the text explicitly states a " +
+      "multi-day range ('1-14 June', 'until 30 June', 'till Sunday'). Never invent a multi-day " +
+      "window that the text does not state. " +
       `category must be one of: ${CATEGORIES.join(", ")}. ` +
       "Classify contentType as exactly one of:\n" +
       "- 'promotion': a real consumer deal/offer with savings (1-for-1, % off, free gift, sale, cashback, voucher, special price).\n" +

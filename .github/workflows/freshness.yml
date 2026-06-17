@@ -1,0 +1,27 @@
+name: Promo freshness
+
+# Keeps deals accurate: re-audits active promo dates with the free LLM and
+# archives anything past its (corrected) end date. Runs daily; can also be
+# triggered manually from the Actions tab.
+on:
+  schedule:
+    - cron: "0 18 * * *" # 02:00 SGT daily (18:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  reaudit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci --legacy-peer-deps
+      - name: Re-audit promo dates + archive expired
+        run: node scripts/reaudit-dates.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}

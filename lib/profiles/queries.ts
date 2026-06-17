@@ -31,3 +31,21 @@ export async function getProfilesByIds(ids: string[]): Promise<Map<string, Publi
   }
   return map;
 }
+
+/** Minimal author info for rendering avatars/names in feeds (client-safe, serializable). */
+export interface AuthorInfo {
+  avatarUrl: string | null;
+  displayName: string | null;
+}
+
+/** Build a `userId → {avatarUrl, displayName}` record for a set of authored rows. */
+export async function getAuthorsFor(
+  rows: { userId: string }[],
+): Promise<Record<string, AuthorInfo>> {
+  const profiles = await getProfilesByIds(rows.map((r) => r.userId));
+  const out: Record<string, AuthorInfo> = {};
+  for (const [id, p] of profiles) {
+    out[id] = { avatarUrl: p.avatarUrl, displayName: p.displayName };
+  }
+  return out;
+}

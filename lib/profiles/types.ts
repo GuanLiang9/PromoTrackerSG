@@ -5,6 +5,7 @@ export interface PublicProfile {
   avatarUrl: string | null;
   bio: string | null;
   username: string | null;
+  isPublic: boolean;
 }
 
 export interface PublicProfileRow {
@@ -13,6 +14,7 @@ export interface PublicProfileRow {
   avatar_url: string | null;
   bio: string | null;
   username: string | null;
+  is_public: boolean | null;
 }
 
 export function mapProfileRow(r: PublicProfileRow): PublicProfile {
@@ -22,6 +24,7 @@ export function mapProfileRow(r: PublicProfileRow): PublicProfile {
     avatarUrl: r.avatar_url,
     bio: r.bio,
     username: r.username,
+    isPublic: Boolean(r.is_public),
   };
 }
 

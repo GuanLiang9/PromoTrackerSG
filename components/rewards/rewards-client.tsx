@@ -9,6 +9,7 @@ import { evaluateBadges } from "@/lib/rewards/badges";
 import { levelFor } from "@/lib/rewards/levels";
 import type { Quest } from "@/lib/rewards/quests";
 import type { LeaderboardRow } from "@/lib/rewards/queries";
+import { acknowledge } from "@/lib/rewards/seen";
 import { Avatar } from "@/components/profile/avatar";
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -33,6 +34,11 @@ export function RewardsClient({
   const [scope, setScope] = React.useState<LbScope>("global");
   const activeBoard = scope === "friends" ? friendsLeaderboard : leaderboard;
   const inTop = activeBoard.some((r) => r.user_id === currentUserId);
+
+  // Viewing rewards marks all current achievements as seen → clears the trophy badge.
+  React.useEffect(() => {
+    if (currentUserId && personal) acknowledge(currentUserId, personal);
+  }, [currentUserId, personal]);
 
   return (
     <div className="space-y-6 pb-4">

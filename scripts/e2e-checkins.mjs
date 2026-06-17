@@ -34,6 +34,9 @@ try {
     createdUserIds.push(data.user.id);
   }
   const [uidA] = createdUserIds;
+  // Check-ins are private by default (migration 0012). This test exercises the
+  // public-read path, so make user A public.
+  await admin.from("profiles").update({ is_public: true }).eq("id", uidA);
   const A = await signedClient(emailA);
   const B = await signedClient(emailB);
   const anon = createClient(URL, ANON, { auth: { persistSession: false } });

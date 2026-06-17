@@ -6,10 +6,11 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ChevronLeft, Crosshair, Loader2, MapPin, Sparkles, Star } from "lucide-react";
 import { CUISINE_META, type CuisineType } from "@/lib/food/spots";
-import { createCheckIn } from "@/lib/checkins/actions";
+import { createCheckIn, updateCheckIn } from "@/lib/checkins/actions";
 import { useToast } from "@/components/feedback/toast-provider";
 import { cn } from "@/lib/utils";
 import type { NearbyVenue } from "@/lib/venues/nearby";
+import type { CheckIn } from "@/lib/checkins/types";
 
 const SG_CENTER = { lat: 1.3521, lng: 103.8198 };
 const CUISINES = Object.entries(CUISINE_META) as [CuisineType, (typeof CUISINE_META)[CuisineType]][];
@@ -23,17 +24,29 @@ const PickLocationMap = dynamic(() => import("@/components/checkins/pick-locatio
   ),
 });
 
-export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }) {
+export function CheckInForm({
+  defaultAuthorName,
+  checkIn,
+}: {
+  defaultAuthorName: string;
+  /** When provided, the form edits this existing check-in instead of creating. */
+  checkIn?: CheckIn;
+}) {
   const router = useRouter();
+  const editing = !!checkIn;
   const { toast, celebrate } = useToast();
-  const [pos, setPos] = React.useState(SG_CENTER);
-  const [located, setLocated] = React.useState(false);
-  const [venueName, setVenueName] = React.useState("");
-  const [authorName, setAuthorName] = React.useState(defaultAuthorName);
-  const [cuisine, setCuisine] = React.useState<CuisineType | null>(null);
-  const [area, setArea] = React.useState("");
-  const [rating, setRating] = React.useState<number | null>(null);
-  const [note, setNote] = React.useState("");
+  const [pos, setPos] = React.useState(
+    checkIn ? { lat: checkIn.latitude, lng: checkIn.longitude } : SG_CENTER,
+  );
+  const [located, setLocated] = React.useState(editing);
+  const [venueName, setVenueName] = React.useState(checkIn?.venueName ?? "");
+  const [authorName, setAuthorName] = React.useState(checkIn?.authorName ?? defaultAuthorName);
+  const [cuisine, setCuisine] = React.useState<CuisineType | null>(
+    (checkIn?.cuisine as CuisineType | null) ?? null,
+  );
+  const [area, setArea] = React.useState(checkIn?.area ?? "");
+  const [rating, setRating] = React.useState<number | null>(checkIn?.rating ?? null);
+  const [note, setNote] = React.useState(checkIn?.note ?? "");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [nearby, setNearby] = React.useState<NearbyVenue[]>([]);
@@ -86,10 +99,10 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
     );
   }, []);
 
-  // Auto-detect once on mount.
+  // Auto-detect once on mount — but only when creating (editing keeps the saved spot).
   React.useEffect(() => {
-    locate();
-  }, [locate]);
+    if (!editing) locate();
+  }, [editing, locate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,7 +112,7 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
       return;
     }
     setSubmitting(true);
-    const res = await createCheckIn({
+    const input = {
       venueName,
       authorName,
       note,
@@ -108,13 +121,16 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
       area,
       latitude: pos.lat,
       longitude: pos.lng,
-    });
+    };
+    const res = editing ? await updateCheckIn(checkIn!.id, input) : await createCheckIn(input);
     if (!res.ok) {
       setError(res.error ?? "Something went wrong.");
       setSubmitting(false);
       return;
     }
-    if (res.reward) {
+    if (editing) {
+      toast({ title: "Check-in updated" });
+    } else if (res.reward) {
       const gained = res.reward.pointsGained;
       toast({
         title: "Checked in! 🎉",
@@ -139,9 +155,13 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-500/8 blur-3xl" />
         <div className="relative space-y-2">
           <div className="text-3xl">📍</div>
-          <h1 className="text-2xl font-bold tracking-tight">Check in a spot</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {editing ? "Edit check-in" : "Check in a spot"}
+          </h1>
           <p className="max-w-sm text-sm text-muted-foreground">
-            Found somewhere worth sharing? Drop a pin, rate it, and post it to the community map.
+            {editing
+              ? "Update the details — your rating, note, cuisine or pin."
+              : "Found somewhere worth sharing? Drop a pin, rate it, and post it to the community map."}
           </p>
         </div>
       </div>
@@ -326,7 +346,13 @@ export function CheckInForm({ defaultAuthorName }: { defaultAuthorName: string }
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitting ? "Posting…" : "Post check-in"}
+          {submitting
+            ? editing
+              ? "Saving…"
+              : "Posting…"
+            : editing
+              ? "Save changes"
+              : "Post check-in"}
         </button>
       </form>
     </div>

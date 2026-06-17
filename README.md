@@ -74,6 +74,8 @@ Without Supabase keys the app still boots and shows a friendly setup notice inst
 | `npm run test` | Vitest unit tests |
 | `node --env-file=.env.local scripts/e2e-checkins.mjs` | End-to-end RLS test for Community Spots |
 | `node --env-file=.env.local scripts/e2e-social.mjs` | End-to-end RLS test for profiles, friends, badges, leaderboard view + avatar Storage |
+| `node --env-file=.env.local scripts/e2e-visibility.mjs` | End-to-end RLS test for private-by-default check-in visibility |
+| `node --env-file=.env.local scripts/reaudit-dates.mjs` | Re-audit active promo dates with the free LLM + archive expired |
 | `node scripts/deploy-pages.mjs` | Build + deploy to Cloudflare Pages (reads CF creds from `.env.local`) |
 
 ---
@@ -289,11 +291,22 @@ came from override/subject/keyword/category) for QA.
 service worker (`app/sw.ts`) already handles `push` + `notificationclick`. Triggers
 (ending-tomorrow, new-in-favourite-category) and delivery are wired later.
 
-### Automatic expiry
+### Automatic expiry & date re-audit
 
 `POST /api/cron/expire` (also accepts `GET`) flips `status` from `active` → `archived` for
 promotions whose `end_date` has passed. History is preserved; the frontend only queries
 `active`. Protect it with `CRON_SECRET`.
+
+**Date accuracy.** Extraction never inflates a single-day post into a multi-day deal: the LLM is
+told that "on June 14"/"this Saturday" means `start == end`, and `toRow` (`lib/ingestion/upsert.ts`)
+falls back to `end = start` when only a start is known (a short window only for fully-undated
+posts). `scripts/reaudit-dates.mjs` re-reads each active promo's text with the free LLM, corrects
+its dates, and archives anything past its corrected end — safe to run repeatedly.
+
+**Daily freshness (free).** `.github/workflows/freshness.yml` runs `reaudit-dates.mjs` on a daily
+cron (and on demand). It needs these **GitHub repo secrets**: `NEXT_PUBLIC_SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` (a currently-available free
+model such as `openai/gpt-oss-120b:free`), `NEXT_PUBLIC_SITE_URL`.
 
 ---
 

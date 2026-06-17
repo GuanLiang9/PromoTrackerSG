@@ -18,6 +18,12 @@ export interface StaticPin {
   country?: string;
   /** Owner of a community check-in (spot pins only) — for the Friends filter. */
   userId?: string;
+  // ── Spot-pin extras (community check-ins) for the rich detail card ──
+  rating?: number | null;
+  authorName?: string;
+  avatarUrl?: string | null;
+  note?: string | null;
+  createdAt?: string;
 }
 
 import type { FoodSpot } from "@/lib/food/spots";
@@ -45,8 +51,12 @@ export function foodSpotToPin(s: FoodSpot): StaticPin | null {
   };
 }
 
-export function checkInToPin(c: CheckIn): StaticPin {
+export function checkInToPin(
+  c: CheckIn,
+  author?: { avatarUrl: string | null; displayName: string | null },
+): StaticPin {
   const meta = c.cuisine ? CUISINE_META[c.cuisine] : null;
+  const authorName = author?.displayName || c.authorName;
   return {
     id: `spot-${c.id}`,
     name: c.venueName,
@@ -56,10 +66,15 @@ export function checkInToPin(c: CheckIn): StaticPin {
     emoji: meta?.emoji ?? "🍴",
     bg: meta?.bg ?? "bg-zinc-100 text-zinc-800",
     area: c.area ?? "Singapore",
-    description: c.note ?? `Checked in by ${c.authorName}`,
+    description: c.note ?? `Checked in by ${authorName}`,
     mapsUrl: `https://www.google.com/maps/search/?api=1&query=${c.latitude},${c.longitude}`,
     tag: meta?.label ?? "Community spot",
     userId: c.userId,
+    rating: c.rating,
+    authorName,
+    avatarUrl: author?.avatarUrl ?? null,
+    note: c.note,
+    createdAt: c.createdAt,
   };
 }
 

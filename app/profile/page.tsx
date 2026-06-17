@@ -38,6 +38,7 @@ export default async function ProfilePage() {
     avatarUrl: null,
     bio: null,
     username: null,
+    isPublic: false,
   };
   const stats = computeStats(rows);
   const rank = await getUserRank(stats.points);

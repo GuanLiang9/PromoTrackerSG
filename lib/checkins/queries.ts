@@ -46,6 +46,19 @@ export async function getUserCheckIns(userId: string, limit = 200): Promise<Chec
   return (data as CheckInRow[]).map(mapRowToCheckIn);
 }
 
+/** A single check-in by id (RLS-gated), or null if not visible / not found. */
+export async function getCheckInById(id: string): Promise<CheckIn | null> {
+  if (!isSupabaseConfigured) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("check_ins")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRowToCheckIn(data as CheckInRow) : null;
+}
+
 /** Current user id, or null when signed out. */
 export async function getCurrentUserId(): Promise<string | null> {
   if (!isSupabaseConfigured) return null;

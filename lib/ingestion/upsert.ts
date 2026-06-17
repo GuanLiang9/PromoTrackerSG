@@ -8,14 +8,17 @@ function toDateKey(d: Date): string {
 }
 
 /**
- * Maps a normalized promotion to a `promotions` row. Promotions without explicit
- * dates default to a 7-day window (down from 30) so undated posts expire quickly
- * instead of surfacing stale deals for a month.
+ * Maps a normalized promotion to a `promotions` row.
+ * End-date resolution (most accurate → fallback):
+ *  - explicit endDate wins;
+ *  - else if a startDate is known, treat it as a SINGLE-DAY post (end = start) —
+ *    never inflate "On June 14" into a multi-day deal;
+ *  - else (no dates at all) keep a short 7-day window so undated posts expire fast.
  */
 export function toRow(p: NormalizedPromotion) {
   const today = new Date();
   const start = p.startDate ?? toDateKey(today);
-  let end = p.endDate ?? toDateKey(new Date(today.getTime() + 7 * DAY));
+  let end = p.endDate ?? p.startDate ?? toDateKey(new Date(today.getTime() + 7 * DAY));
   if (end < start) end = start;
   // Clamp end_date: if it's already in the past keep start but push end to
   // at least today so the promotion stays visible (handles mis-extracted dates).
