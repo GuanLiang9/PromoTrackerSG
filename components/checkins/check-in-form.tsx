@@ -221,8 +221,11 @@ export function CheckInForm({
                       <span className="line-clamp-1 text-xs font-semibold">
                         {meta?.emoji ?? "📍"} {v.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                         {v.distanceM} m{v.area ? ` · ${v.area}` : ""}
+                        {v.source === "community" && v.count ? (
+                          <span className="font-semibold text-brand">🔥 {v.count}</span>
+                        ) : null}
                       </span>
                     </button>
                   );

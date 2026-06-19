@@ -1,13 +1,16 @@
 import "server-only";
 import { FOOD_SPOTS, type CuisineType } from "@/lib/food/spots";
 import { JB_FOOD_SPOTS } from "@/lib/food/jb-spots";
+import { createClient } from "@/lib/supabase/server";
 
 export interface NearbyVenue {
   name: string;
   cuisine: CuisineType | null;
   area: string | null;
   distanceM: number;
-  source: "curated" | "osm";
+  source: "curated" | "osm" | "community";
+  /** Number of check-ins at this venue (community source only). */
+  count?: number;
 }
 
 export interface NearbyResult {
@@ -112,6 +115,37 @@ async function nearbyOsm(lat: number, lng: number, radiusM: number): Promise<Nea
   }
 }
 
+// ── Community venues (crowd-sourced from check-ins, identity-hidden) ──────────
+interface CommunityRow {
+  name: string;
+  cuisine: string | null;
+  area: string | null;
+  distance_m: number;
+  check_in_count: number;
+}
+
+async function nearbyCommunity(lat: number, lng: number, radiusM: number): Promise<NearbyVenue[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("nearby_community_venues", {
+      in_lat: lat,
+      in_lng: lng,
+      radius_m: radiusM,
+    });
+    if (error || !data) return [];
+    return (data as CommunityRow[]).map((r) => ({
+      name: r.name,
+      cuisine: (r.cuisine as CuisineType | null) ?? null,
+      area: r.area,
+      distanceM: r.distance_m,
+      source: "community" as const,
+      count: r.check_in_count,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Reverse geocode (area) ───────────────────────────────────────────────────
 async function reverseGeocodeArea(lat: number, lng: number): Promise<string | null> {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16&addressdetails=1`;
@@ -140,15 +174,17 @@ export async function getNearbyVenues(lat: number, lng: number): Promise<NearbyR
   if (hit && Date.now() - hit.at < TTL) return hit.result;
 
   const curated = nearbyCurated(lat, lng, 350);
-  const [osm, area] = await Promise.all([
+  const [community, osm, area] = await Promise.all([
+    nearbyCommunity(lat, lng, 250),
     nearbyOsm(lat, lng, 200),
     reverseGeocodeArea(lat, lng),
   ]);
 
-  // Curated first (richer metadata); OSM fills the rest, deduped by name.
-  const seen = new Set(curated.map((v) => v.name.toLowerCase()));
-  const merged = [...curated];
-  for (const v of osm) {
+  // Priority curated → community → osm: curated has the richest metadata,
+  // community is proven real-user data that fills gaps OSM misses. Dedupe by name.
+  const seen = new Set<string>();
+  const merged: NearbyVenue[] = [];
+  for (const v of [...curated, ...community, ...osm]) {
     const k = v.name.toLowerCase();
     if (seen.has(k)) continue;
     seen.add(k);
