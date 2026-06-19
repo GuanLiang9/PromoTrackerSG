@@ -36,6 +36,9 @@ try {
   const browser = await puppeteer.launch({ executablePath: EDGE, headless: "new", args: ["--no-sandbox"] });
   const page = await browser.newPage();
   await page.setViewport({ width: 360, height: 740, isMobile: true });
+  // Let the check-in form geolocate onto the seeded venue's coordinates.
+  await browser.defaultBrowserContext().overridePermissions(BASE, ["geolocation"]);
+  await page.setGeolocation({ latitude: 1.3536, longitude: 103.945 });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
 
@@ -92,7 +95,17 @@ try {
   ok(detail.hasVenue, "/map?spot= shows the venue name");
   ok(detail.hasNote || detail.hasRating, "/map?spot= shows the check-in details (note/rating)");
 
-  // 4) Edit page renders for the owner
+  // 4) Community venue appears in the check-in Nearby picker (crowd-sourced)
+  await page.goto(BASE + "/check-in", { waitUntil: "networkidle2", timeout: 60000 });
+  await sleep(3500); // geolocate → debounced nearby fetch
+  const picker = await page.evaluate(() => {
+    const t = document.body.innerText;
+    return { hasVenue: /UI Test Cafe/.test(t), hasFire: /🔥/.test(t) };
+  });
+  ok(picker.hasVenue, "check-in Nearby picker surfaces the community venue");
+  ok(picker.hasFire, "community venue shows the 🔥 check-in-count badge");
+
+  // 5) Edit page renders for the owner
   await page.goto(BASE + `/check-in/${checkInId}/edit`, { waitUntil: "networkidle2", timeout: 60000 });
   await sleep(1200);
   const edit = await page.evaluate(() => {
