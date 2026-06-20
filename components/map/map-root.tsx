@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { Crosshair, ExternalLink, Pencil, Star, X } from "lucide-react";
+import { Crosshair, ExternalLink, Pencil, Search, Star, X } from "lucide-react";
 import { Avatar } from "@/components/profile/avatar";
 import { CATEGORIES, getCategoryMeta } from "@/lib/constants";
 import { formatDateRange } from "@/lib/format";
@@ -57,6 +57,7 @@ export function MapRoot({
   focusSpotId?: string | null;
 }) {
   const [layer, setLayer] = React.useState<MapLayer>("deals");
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [countryFilter, setCountryFilter] = React.useState<"all" | "SG" | "MY">("all");
   const [spotScope, setSpotScope] = React.useState<SpotScope>("all");
   const friendSet = React.useMemo(() => new Set(friendIds), [friendIds]);
@@ -115,14 +116,28 @@ export function MapRoot({
   const currentStaticPins =
     layer === "food" ? visibleFoodPins : layer === "gems" ? gemPins : layer === "spots" ? visibleSpotPins : [];
 
-  const totalPins =
-    layer === "deals"
-      ? visibleDeals.length
-      : layer === "food"
-      ? visibleFoodPins.length
-      : layer === "gems"
-      ? gemPins.length
-      : visibleSpotPins.length;
+  const q = searchQuery.toLowerCase().trim();
+
+  const filteredPins = React.useMemo(() => {
+    if (!q) return currentStaticPins;
+    return currentStaticPins.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.area?.toLowerCase().includes(q) ||
+        p.tag?.toLowerCase().includes(q),
+    );
+  }, [currentStaticPins, q]);
+
+  const filteredDeals = React.useMemo(() => {
+    if (!q) return visibleDeals;
+    return visibleDeals.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.location?.toLowerCase().includes(q),
+    );
+  }, [visibleDeals, q]);
+
+  const totalPins = layer === "deals" ? filteredDeals.length : filteredPins.length;
 
   const onSelectDeal = React.useCallback((p: Promotion) => {
     setSelected(p);
@@ -136,6 +151,7 @@ export function MapRoot({
 
   function switchLayer(l: MapLayer) {
     setLayer(l);
+    setSearchQuery("");
     setSelected(null);
     setSelectedPin(null);
   }
@@ -186,8 +202,8 @@ export function MapRoot({
       {/* Map */}
       <div className="absolute inset-0">
         <MapView
-          promotions={layer === "deals" ? visibleDeals : []}
-          staticPins={layer !== "deals" ? currentStaticPins : undefined}
+          promotions={layer === "deals" ? filteredDeals : []}
+          staticPins={layer !== "deals" ? filteredPins : undefined}
           onSelect={onSelectDeal}
           onSelectPin={onSelectPin}
           flyTarget={flyTarget}
@@ -215,14 +231,12 @@ export function MapRoot({
                 type="button"
                 onClick={() => switchLayer(t.value)}
                 className={cn(
-                  "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-xs font-semibold transition-all sm:px-2.5",
+                  "flex flex-1 items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-xs font-semibold transition-all sm:px-2.5",
                   active ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-600 hover:bg-zinc-100",
                 )}
               >
-                <span className="truncate">
-                  <span aria-hidden>{t.emoji}</span>
-                  <span className="ml-1 hidden min-[360px]:inline">{t.label}</span>
-                </span>
+                <span aria-hidden>{t.emoji}</span>
+                <span className="hidden min-[360px]:inline">{t.label}</span>
                 {count > 0 && (
                   <span
                     className={cn(
@@ -236,6 +250,23 @@ export function MapRoot({
               </button>
             );
           })}
+        </div>
+
+        {/* Search bar */}
+        <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-3 py-2 shadow backdrop-blur-xl">
+          <Search className="h-4 w-4 shrink-0 text-zinc-400" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search venues, cuisine, area…"
+            className="min-w-0 flex-1 bg-transparent text-xs text-zinc-800 outline-none placeholder:text-zinc-400"
+          />
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear search">
+              <X className="h-4 w-4 text-zinc-400" />
+            </button>
+          )}
         </div>
 
         {/* Country filter chips (food layer only) */}
