@@ -4,9 +4,6 @@ import { getNearbyVenues } from "@/lib/venues/nearby";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Generous SG + JB bounding box.
-const BOUNDS = { minLat: 1.1, maxLat: 1.65, minLng: 103.4, maxLng: 104.2 };
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lat = Number(searchParams.get("lat"));
@@ -14,8 +11,7 @@ export async function GET(request: Request) {
 
   if (
     !Number.isFinite(lat) || !Number.isFinite(lng) ||
-    lat < BOUNDS.minLat || lat > BOUNDS.maxLat ||
-    lng < BOUNDS.minLng || lng > BOUNDS.maxLng
+    lat < -90 || lat > 90 || lng < -180 || lng > 180
   ) {
     return NextResponse.json({ venues: [], area: null }, { status: 200 });
   }

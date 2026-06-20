@@ -22,11 +22,16 @@ export interface CheckInResult {
   reward?: RewardDelta;
 }
 
-// Singapore bounding box (generous) — rejects coords from elsewhere.
-const SG_BOUNDS = { minLat: 1.15, maxLat: 1.48, minLng: 103.6, maxLng: 104.1 };
-
 function clampStr(v: unknown, max: number): string {
   return String(v ?? "").trim().slice(0, max);
+}
+
+/** True for a finite coordinate within valid earth bounds. */
+function validCoords(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) && Number.isFinite(lng) &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+  );
 }
 
 /** Records a public check-in for the signed-in user. */
@@ -42,12 +47,8 @@ export async function createCheckIn(input: CheckInInput): Promise<CheckInResult>
 
   const lat = Number(input.latitude);
   const lng = Number(input.longitude);
-  if (
-    !Number.isFinite(lat) || !Number.isFinite(lng) ||
-    lat < SG_BOUNDS.minLat || lat > SG_BOUNDS.maxLat ||
-    lng < SG_BOUNDS.minLng || lng > SG_BOUNDS.maxLng
-  ) {
-    return { ok: false, error: "Pick a location within Singapore." };
+  if (!validCoords(lat, lng)) {
+    return { ok: false, error: "Pick a valid location on the map." };
   }
 
   let rating: number | null = null;
@@ -145,12 +146,8 @@ export async function updateCheckIn(id: string, input: CheckInInput): Promise<Ch
 
   const lat = Number(input.latitude);
   const lng = Number(input.longitude);
-  if (
-    !Number.isFinite(lat) || !Number.isFinite(lng) ||
-    lat < SG_BOUNDS.minLat || lat > SG_BOUNDS.maxLat ||
-    lng < SG_BOUNDS.minLng || lng > SG_BOUNDS.maxLng
-  ) {
-    return { ok: false, error: "Pick a location within Singapore." };
+  if (!validCoords(lat, lng)) {
+    return { ok: false, error: "Pick a valid location on the map." };
   }
 
   let rating: number | null = null;
