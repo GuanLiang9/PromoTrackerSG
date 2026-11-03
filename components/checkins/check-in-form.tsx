@@ -122,7 +122,28 @@ export function CheckInForm({
       latitude: pos.lat,
       longitude: pos.lng,
     };
-    const res = editing ? await updateCheckIn(checkIn!.id, input) : await createCheckIn(input);
+    let res: Awaited<ReturnType<typeof createCheckIn>>;
+    try {
+      res = editing ? await updateCheckIn(checkIn!.id, input) : await createCheckIn(input);
+    } catch (err) {
+      // A cached (PWA) build calling a server action from an older deploy throws
+      // instead of returning — reload once to pick up the current build.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/server action|unexpected response|failed to fetch|load failed/i.test(msg)) {
+        try {
+          if (!sessionStorage.getItem("ci-reloaded")) {
+            sessionStorage.setItem("ci-reloaded", "1");
+            setError("App was updated — reloading, please submit again.");
+            setTimeout(() => window.location.reload(), 1200);
+            return;
+          }
+        } catch {}
+      }
+      setError("Couldn't save your check-in. Check your connection and try again.");
+      setSubmitting(false);
+      return;
+    }
+    try { sessionStorage.removeItem("ci-reloaded"); } catch {}
     if (!res.ok) {
       setError(res.error ?? "Something went wrong.");
       setSubmitting(false);
