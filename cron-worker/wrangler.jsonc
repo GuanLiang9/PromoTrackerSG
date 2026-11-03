@@ -4,9 +4,9 @@
   "main": "index.js",
   "compatibility_date": "2025-03-01",
   // Daily: archive expired promos (free, no AI).
-  // Weekly (Mon 02:30 SGT): pull fresh deals (minimal AI usage).
+  // Daily (02:30 SGT): pull fresh deals (seen posts skip the LLM).
   "triggers": {
-    "crons": ["0 18 * * *", "30 18 * * SUN"]
+    "crons": ["0 18 * * *", "30 18 * * *"]
   },
   "observability": {
     "enabled": true

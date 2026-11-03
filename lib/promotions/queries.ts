@@ -128,6 +128,10 @@ export async function getPromotionById(
   return data ? mapRowToPromotion(data as PromotionRow, savedIds) : null;
 }
 
+/** "New" = added in the last N days; "Ending soon" = ends within N days. Shared by dashboard + search. */
+const NEW_WINDOW_DAYS = 14;
+const ENDING_SOON_DAYS = 7;
+
 export interface DashboardSections {
   today: Promotion[];
   newest: Promotion[];
@@ -146,10 +150,10 @@ export async function getDashboardSections(): Promise<DashboardSections> {
   const savedIds = await getSavedIds();
   const today = toDateKey(new Date());
   const in3Days = toDateKey(
-    new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    new Date(Date.now() + ENDING_SOON_DAYS * 24 * 60 * 60 * 1000),
   );
   const last7Days = toDateKey(
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    new Date(Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000),
   );
 
   // Belt-and-suspenders: filter by end_date in the query so expired promos
@@ -239,7 +243,7 @@ export async function searchPromotions(
         .order("start_date", { ascending: true });
       break;
     case "newest": {
-      const last7Days = toDateKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+      const last7Days = toDateKey(new Date(Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000));
       q = q
         .gte("created_at", last7Days)
         .gte("end_date", today)
@@ -247,7 +251,7 @@ export async function searchPromotions(
       break;
     }
     case "ending": {
-      const in3Days = toDateKey(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+      const in3Days = toDateKey(new Date(Date.now() + ENDING_SOON_DAYS * 24 * 60 * 60 * 1000));
       q = q
         .gte("end_date", today)
         .lte("end_date", in3Days)

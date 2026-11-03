@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RegexExtractor } from "@/lib/ingestion/extractor";
 import { IngestionPipeline } from "@/lib/ingestion/pipeline";
 import type { RawItem, SourceAdapter } from "@/lib/ingestion/types";
 
 const extractor = new RegexExtractor();
+
+// Fixtures use fixed June 2026 dates; pin the clock so they aren't treated as expired.
+beforeAll(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-06-01T00:00:00Z")); });
+afterAll(() => { vi.useRealTimers(); });
 
 function rawItem(partial: Partial<RawItem>): RawItem {
   return {

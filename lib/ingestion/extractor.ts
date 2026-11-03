@@ -71,6 +71,14 @@ export function classifyContentType(
   return aiHint && aiHint !== "promotion" ? aiHint : "promotion";
 }
 
+const FOOD_BRAND_RE =
+  /(kfc|mcdonald'?s?|burger king|pizza hut|domino'?s|subway|popeyes|texas chicken|jollibee|starbucks|breadtalk|mister donut|krispy kreme|haidilao|sushi express|ya kun|toast box|old chang kee|mr bean|gong cha|liho|koi|playmade|yole|four ?fingers|swensen'?s|ikea .*buffet)/i;
+
+/** Brand-name guardrail: food chains must be food_beverage whatever the model/regex guessed. */
+export function brandCategory(title: string, current: PromoCategory): PromoCategory {
+  return FOOD_BRAND_RE.test(title) ? "food_beverage" : current;
+}
+
 /** Strip URLs and tidy whitespace/markdown/trailing punctuation from a title. */
 export function sanitizeTitle(raw: string): string {
   return raw
@@ -115,7 +123,9 @@ export class RegexExtractor implements PromotionExtractor {
       description: text.slice(0, 1000),
       category,
       contentType: classifyContentType(title),
-      startDate: start,
+      // "till 31 Dec" has no start of its own — leave it null so upsert uses the
+      // publish date, instead of collapsing the whole window onto the end date.
+      startDate: cueEnd && start === cueEnd && end === start ? null : start,
       endDate: effectiveEnd ?? start,
       location: null,
       tags: extractTags(text),

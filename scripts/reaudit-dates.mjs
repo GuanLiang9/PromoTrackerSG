@@ -8,7 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const KEY = process.env.OPENROUTER_API_KEY || process.env.API_KEY_OPENROUTER || "";
-const MODEL = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+const MODEL = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const LIMIT = Number(process.argv[2] || process.env.REAUDIT_MAX || 0) || Infinity;
 if (!URL || !SVC) { console.error("Missing Supabase env"); process.exit(1); }
@@ -17,8 +17,9 @@ const admin = createClient(URL, SVC, { auth: { persistSession: false } });
 const today = new Date().toISOString().slice(0, 10);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const SYSTEM =
-  `You extract the validity dates of a Singapore promotion/event. Today is ${today}. ` +
+const systemFor = (posted) =>
+  `You extract the validity dates of a Singapore promotion/event. Today is ${today}. The post was published on ${posted}; ` +
+  "resolve relative or year-less dates (\"this Saturday\", \"October 3\") against the PUBLISH date, not today. " +
   "Return ONLY JSON: {\"startDate\": \"YYYY-MM-DD\"|null, \"endDate\": \"YYYY-MM-DD\"|null}. " +
   "Resolve relative dates against today; assume the current year if omitted. " +
   "SINGLE-DAY RULE: if it runs on one day ('on June 14', '14 Jun only', 'this Saturday', " +
@@ -35,7 +36,7 @@ function parseJsonLoose(raw) {
 }
 const iso = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
 
-async function extractDates(text) {
+async function extractDates(text, posted) {
   if (!KEY) return null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -51,7 +52,7 @@ async function extractDates(text) {
         temperature: 0,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM },
+          { role: "system", content: systemFor(posted) },
           { role: "user", content: text.slice(0, 3000) },
         ],
       }),
@@ -76,7 +77,7 @@ async function extractDates(text) {
 
 const { data: promos, error } = await admin
   .from("promotions")
-  .select("id, title, description, terms, start_date, end_date")
+  .select("id, title, description, terms, start_date, end_date, created_at")
   .eq("status", "active")
   .in("content_type", ["promotion", "event"])
   .order("created_at", { ascending: true });
@@ -90,9 +91,18 @@ for (const p of batch) {
   scanned++;
   try {
     const text = [p.title, p.description, p.terms].filter(Boolean).join("\n").trim();
-    const dates = await extractDates(text);
+    const dates = await extractDates(text, p.created_at.slice(0, 10));
     await sleep(350); // be gentle on the free model
-    if (!dates || (!dates.start && !dates.end)) { skipped++; continue; }
+    if (!dates) { skipped++; continue; } // LLM failed/unparseable → never act on a failure
+    if (!dates.start && !dates.end) {
+      // No stated validity and the post is stale → don't keep it live on a guessed window.
+      if (Date.now() - new Date(p.created_at).getTime() > 30 * 86400000) {
+        await admin.from("promotions").update({ status: "archived" }).eq("id", p.id);
+        archived++;
+        console.log(`  archived  (undated, >30d old)  ${p.title.slice(0, 60)}`);
+      } else skipped++;
+      continue;
+    }
 
     let start = dates.start ?? p.start_date;
     let end = dates.end ?? dates.start ?? p.end_date; // single-day fallback

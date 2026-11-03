@@ -7,11 +7,11 @@
  * endpoints over public fetch.
  *
  * Schedule (UTC; Singapore is UTC+8):
- *   - "0 18 * * *"   daily  02:00 SGT → expire (archive ended promos; no AI, free)
- *   - "30 18 * * SUN" weekly Mon 02:30 SGT → ingest new deals (minimal AI usage)
+ *   - "0 18 * * *"   daily 02:00 SGT → expire (archive ended promos; no AI, free)
+ *   - "30 18 * * *"  daily 02:30 SGT → ingest new deals (already-seen posts skip the LLM)
  */
 const APP_URL = "https://promosg.pages.dev";
-const WEEKLY_INGEST = "30 18 * * SUN";
+const DAILY_INGEST = "30 18 * * *";
 
 async function hit(path, secret) {
   const res = await fetch(`${APP_URL}${path}?secret=${secret}`, {
@@ -28,8 +28,8 @@ export default {
       (async () => {
         // Always archive expired promotions (cheap, no AI).
         await hit("/api/cron/expire", secret);
-        // Only pull fresh deals on the weekly trigger.
-        if (event.cron === WEEKLY_INGEST) {
+        // Pull fresh deals on the daily ingest trigger.
+        if (event.cron === DAILY_INGEST) {
           await hit("/api/cron/ingest", secret);
         }
       })(),

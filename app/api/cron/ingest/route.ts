@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { IngestionPipeline } from "@/lib/ingestion/pipeline";
 import { buildAdapters } from "@/lib/ingestion/sources";
 import { OpenRouterExtractor } from "@/lib/ingestion/openrouter-extractor";
-import { classifyContentType } from "@/lib/ingestion/extractor";
+import { brandCategory, classifyContentType } from "@/lib/ingestion/extractor";
 import { upsertPromotions } from "@/lib/ingestion/upsert";
 import { geocodeFromDictionary, geocodeLocation } from "@/lib/ingestion/geocode";
 import { resolveImage } from "@/lib/ingestion/image-resolver";
@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? Math.min(n, hi) : def;
   };
-  const maxItems = clamp(sp.get("max"), 25, 500);
+  const maxItems = clamp(sp.get("max"), 12, 500); // 19 sources + LLM calls must fit the 50-subrequest cap
   const maxAttempts = clamp(sp.get("attempts"), 1, 4);
-  const perSource = clamp(sp.get("limit"), 8, 40);
+  const perSource = clamp(sp.get("limit"), 6, 40);
 
   const supabase = createAdminClient();
 
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       EDITORIAL_SOURCES.has(p.sourceName),
       p.contentType,
     );
+    p.category = brandCategory(p.title, p.category);
   }
 
   // Geocode locations so promos can appear on the map. The dictionary is free

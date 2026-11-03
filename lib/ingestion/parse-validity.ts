@@ -71,13 +71,16 @@ export function parseValidity(text: string, refYear: number): ParsedValidity {
     m: number,
     d: number,
     matchStart: number,
+    matchEnd: number,
   ) => {
     const explicit = y != null;
     const date = iso(y ?? refYear, m, d);
     if (!date) return;
     found.push({ date, year: explicit });
     // Cue-anchored when a terminal-validity word sits just before the date.
-    if (CUE_RE.test(t.slice(Math.max(0, matchStart - 24), matchStart))) {
+    // ...but "Valid 10 Jun to 20 Jun" is a range: its first date is the START, not a deadline.
+    const isRangeStart = /^\s*(?:to|until|till|–|—|-)\s*\d/i.test(t.slice(matchEnd, matchEnd + 12));
+    if (!isRangeStart && CUE_RE.test(t.slice(Math.max(0, matchStart - 24), matchStart))) {
       cueDates.push(date);
     }
   };
@@ -86,19 +89,19 @@ export function parseValidity(text: string, refYear: number): ParsedValidity {
 
   DMY_RE.lastIndex = 0;
   while ((mm = DMY_RE.exec(t)) !== null) {
-    push(mm[3] ? Number(mm[3]) : undefined, MONTHS[mm[2].toLowerCase()], Number(mm[1]), mm.index);
+    push(mm[3] ? Number(mm[3]) : undefined, MONTHS[mm[2].toLowerCase()], Number(mm[1]), mm.index, mm.index + mm[0].length);
   }
   MDY_RE.lastIndex = 0;
   while ((mm = MDY_RE.exec(t)) !== null) {
-    push(mm[3] ? Number(mm[3]) : undefined, MONTHS[mm[1].toLowerCase()], Number(mm[2]), mm.index);
+    push(mm[3] ? Number(mm[3]) : undefined, MONTHS[mm[1].toLowerCase()], Number(mm[2]), mm.index, mm.index + mm[0].length);
   }
   ISO_RE.lastIndex = 0;
   while ((mm = ISO_RE.exec(t)) !== null) {
-    push(Number(mm[1]), Number(mm[2]), Number(mm[3]), mm.index);
+    push(Number(mm[1]), Number(mm[2]), Number(mm[3]), mm.index, mm.index + mm[0].length);
   }
   DMY_SLASH_RE.lastIndex = 0;
   while ((mm = DMY_SLASH_RE.exec(t)) !== null) {
-    push(Number(mm[3]), Number(mm[2]), Number(mm[1]), mm.index);
+    push(Number(mm[3]), Number(mm[2]), Number(mm[1]), mm.index, mm.index + mm[0].length);
   }
 
   if (found.length === 0) {

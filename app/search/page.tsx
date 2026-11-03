@@ -27,6 +27,12 @@ export default async function SearchPage({
     (v) => v !== undefined && (!Array.isArray(v) || v.length > 0),
   );
   const results = hasFilters ? await searchPromotions(filters) : [];
+  // A sort chip with nothing in its window shouldn't leave a blank page:
+  // fall back to every live promo so the user still sees something.
+  const sortEmpty = !!filters.sort && results.length === 0;
+  const fallback = sortEmpty
+    ? await searchPromotions({ ...filters, sort: undefined })
+    : [];
 
   return (
     <div className="space-y-5">
@@ -48,10 +54,21 @@ export default async function SearchPage({
               {SORT_LABELS[filters.sort]}
             </h2>
           )}
-          <p className="text-sm text-muted-foreground">
-            {results.length} result{results.length === 1 ? "" : "s"}
-          </p>
-          <PromoGrid promotions={results} empty="No promotions match your filters." />
+          {sortEmpty && fallback.length > 0 ? (
+            <>
+              <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+                Nothing in “{SORT_LABELS[filters.sort!]}” right now — showing all live promotions instead.
+              </p>
+              <PromoGrid promotions={fallback} />
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {results.length} result{results.length === 1 ? "" : "s"}
+              </p>
+              <PromoGrid promotions={results} empty="No promotions match your filters." />
+            </>
+          )}
         </>
       ) : (
         <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">

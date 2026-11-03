@@ -61,7 +61,7 @@ export class OpenRouterExtractor implements PromotionExtractor {
     this.model =
       opts.model ??
       process.env.OPENROUTER_MODEL ??
-      "meta-llama/llama-3.3-70b-instruct:free";
+      "google/gemma-4-26b-a4b-it:free";
     // 1 attempt = no retry (cheapest on subrequest-limited runtimes).
     this.maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
   }

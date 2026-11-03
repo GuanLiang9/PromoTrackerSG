@@ -3,8 +3,9 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { Crosshair, ExternalLink, Pencil, Search, Star, X } from "lucide-react";
+import { ChevronLeft, Crosshair, ExternalLink, Pencil, Search, Star, X } from "lucide-react";
 import { Avatar } from "@/components/profile/avatar";
 import { CATEGORIES, getCategoryMeta } from "@/lib/constants";
 import { formatDateRange } from "@/lib/format";
@@ -56,6 +57,7 @@ export function MapRoot({
   focusId?: string | null;
   focusSpotId?: string | null;
 }) {
+  const router = useRouter();
   const [layer, setLayer] = React.useState<MapLayer>("deals");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [countryFilter, setCountryFilter] = React.useState<"all" | "SG" | "MY">("all");
@@ -213,8 +215,17 @@ export function MapRoot({
 
       {/* Floating top overlay */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] space-y-2 p-3">
-        {/* Layer tabs */}
-        <div className="pointer-events-auto flex w-full gap-1 rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-lg backdrop-blur-xl">
+        {/* Back + layer tabs */}
+        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => (window.history.length > 1 ? router.back() : router.push("/dashboard"))}
+          aria-label="Back"
+          className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/40 bg-white/70 text-zinc-800 shadow-lg backdrop-blur-xl transition-transform active:scale-95"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="pointer-events-auto flex min-w-0 flex-1 gap-1 rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-lg backdrop-blur-xl">
           {LAYER_TABS.map((t) => {
             const count =
               t.value === "deals"
@@ -250,6 +261,7 @@ export function MapRoot({
               </button>
             );
           })}
+        </div>
         </div>
 
         {/* Search bar */}
